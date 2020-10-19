@@ -34,15 +34,18 @@ if (HPC == TRUE){
 }
 
 all_params <- enviro_list[[ID]]
-r(r in 1:n_runs){
-  input_params <- enviro_list[[1]]
-  
-  ID_char <- sprintf("%06d",input_params$cellID) # Set the ID as a 4 digit character so it will sort properly
 
-  out$model$model_runtime <- system.time(
-    out <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
-  )
+input_params <- enviro_list[[1]]
+input_params$dt <- 0.1
+input_params$tmax <- 1
 
-  saveRDS(out, file = paste0("RawOutput/", jobname, "_", ID_char,".RDS"))
-  rm(out)
-}
+zoomsstest$model$model_runtime <- system.time(
+  zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
+)
+
+input_params$tmaxx <- input_params$tmax
+
+source("fZooMizer_run.R")
+groups <- read.csv("data/TestGroups_mizer.csv")
+
+zoomizertest <- fZooMizer_run(groups = groups, input = input_params)

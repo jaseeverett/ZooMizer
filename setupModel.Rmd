@@ -334,15 +334,15 @@ Still missing is the differential prey nutrition based on prey carbon content. W
 
 #set up matrix of pred nutrition given prey, dims (pred species) x (prey species)
 assim_eff = matrix(mf.params@species_params$GrossGEscale * mf.params@species_params$Carbon, nrow = nrow(mf.params@species_params), ncol = nrow(mf.params@species_params))
-get_filterfeeders <- which(mf.params@species_params$FeedType == "FilterFeeder")
+#get_filterfeeders <- which(mf.params@species_params$FeedType == "FilterFeeder")
 
 cc_phyto <- 0.1 #carbon content of phytoplankton
 assim_phyto <- mf.params@species_params$GrossGEscale * cc_phyto #assimilation efficiency when eating phytoplankton
 
 #TODO: make the assim_eff a parameter in the MizerParams object
-for (i in get_filterfeeders) {
-  assim_eff[,i] <- assim_eff[,i] / mf.params@species_params$Carbon[i]
-}
+#for (i in get_filterfeeders) {
+#  assim_eff[,i] <- assim_eff[,i] / mf.params@species_params$Carbon[i]
+#}
 
 new_Encounter <- function(params, n, n_pp, n_other, t, ...) {
 
@@ -505,8 +505,8 @@ pzoomizer[[ceiling(length(zoomizergrid))/2]]
 
 testdf <- data.frame(zoomsstcb = numeric(length(zoomizergrid)),zoomizertcb = numeric(length(zoomizergrid)))
 for (i in 1:nrow(testdf)) {
-testdf$zoomsstcb[i] = sum(hack@n[i,,]*w*dw)
-testdf$zoomizertcb[i] = sum(zoomizergrid[[i]]@n[tmax,,]*w*dw)
+testdf$zoomsstcb[i] = sum(hack@n[i,,]*w)
+testdf$zoomizertcb[i] = sum(zoomizergrid[[i]]@n[tmax,,]*w)
 }
 
 (scatter <- ggplot(testdf, aes(x=log10(zoomsstcb), y=log10(zoomizertcb)))+

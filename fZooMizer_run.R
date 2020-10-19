@@ -99,11 +99,11 @@ setZooMizerConstants <- function(params, Groups, sst){
 
 setassim_eff <- function(groups){
 assim_eff = matrix(groups$GrossGEscale * groups$Carbon, nrow = nrow(groups), ncol = nrow(groups))
-get_filterfeeders <- which(groups$FeedType == "FilterFeeder")
+#get_filterfeeders <- which(groups$FeedType == "FilterFeeder")
 
-for (i in get_filterfeeders) {
-  assim_eff[,i] <- assim_eff[,i] / groups$Carbon[i]
-}
+#for (i in get_filterfeeders) {
+#  assim_eff[,i] <- assim_eff[,i] / groups$Carbon[i]
+#}
 return(assim_eff)
 }
 
