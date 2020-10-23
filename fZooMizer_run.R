@@ -4,6 +4,37 @@ phyto_fixed <- function(params, n, n_pp, n_other, rates, dt, kappa=params@resour
   return(npp)
 }
 
+setmort_test <- function(params, sst){
+  #### CALCULATES CONSTANT BITS OF THE MODEL FUNCTIONS FOR EACH GROUP
+  M_sb <- getExtMort(params)
+  M_sb[] <- readRDS("data/mu_b.RDS")
+  ZSpre <- 1 # senescence mortality prefactor
+  ZSexp <- 0.3 # senescence mortality exponent
+  # 
+  # for(i in 1:nrow(params@species_params)){
+  #   ## Senescence mortality
+  #   if(params@species_params$Type[i] == "Zooplankton"){
+  #     M_sb[i,] <- ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
+  #     M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
+  #     M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
+  #   }
+  #   
+  #   if(params@species_params$Type[i] == "Fish"){
+  #     M_sb[i,] <- 0.1*ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
+  #     M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
+  #     M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
+  #   }
+  #   }
+  
+  #temperature effect 
+  temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(params@species_params$species), ncol = length(params@w))
+  M_sb <- temp_eff * M_sb # Incorporate temp effect on senscence mortality
+  
+  params <- setExtMort(params, z0 = M_sb)
+
+  return(params)
+}
+
 setZooMizerConstants <- function(params, Groups, sst){
   #### CALCULATES CONSTANT BITS OF THE MODEL FUNCTIONS FOR EACH GROUP
   SearchVol <- getSearchVolume(params)
@@ -19,19 +50,19 @@ setZooMizerConstants <- function(params, Groups, sst){
     ## Senescence mortality
     if(params@species_params$Type[i] == "Zooplankton"){
       M_sb[i,] <- ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
-      M_sb[i, params@species_params$w_max[i] < params@w] <- 0
+      M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
       M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
     }
     
     if(params@species_params$Type[i] == "Fish"){
       M_sb[i,] <- 0.1*ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
-      M_sb[i, params@species_params$w_max[i] < params@w] <- 0
+      M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
       M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
     }
     
     ### Search volume
     SearchVol[i,] <- (params@species_params$gamma[i])*(params@w^(params@species_params$q[i]))
-    SearchVol[i, params@species_params$w_max[i] < params@w] <- 0
+    SearchVol[i, params@species_params$w_inf[i] < params@w] <- 0
     SearchVol[i, params@species_params$w_min[i] > params@w] <- 0
     
     ### Predation Kernels
@@ -313,6 +344,8 @@ fZooMizer_run <- function(groups, input){
                                      #pred_kernel = ... #probably easiest to just import this/pre-calculate it, once dimensions are worked out
   )
   
+  mf.params@initial_n[] <- readRDS("data/initialn.RDS")
+  
   temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
   
   mf.params@other_params$assim_eff <- setassim_eff(groups)
@@ -320,8 +353,9 @@ fZooMizer_run <- function(groups, input){
   mf.params@other_params$temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
   
   mf.params <- setZooMizerConstants(params = mf.params, Groups = groups, sst = input$sst)
+  mf.params@initial_n[] <- readRDS("data/initialn.RDS")
   
-  mf.params <- setParams(mf.params)
+  #mf.params <- setParams(mf.params)
   
   mf.params <- setRateFunction(mf.params, "PredRate", "new_PredRate")
   mf.params <- setRateFunction(mf.params, "EReproAndGrowth", "new_EReproAndGrowth")
@@ -329,6 +363,7 @@ fZooMizer_run <- function(groups, input){
   mf.params <- setRateFunction(mf.params, "Encounter", "new_Encounter")
   
   mf.params <- setReproduction(mf.params, repro_prop = matrix(0, nrow = nrow(mf.params@psi), ncol = ncol(mf.params@psi)))
+  mf.params <- setmort_test(mf.params, sst)
   
   sim <- project(mf.params, dt = dt, t_max = tmaxx)
   
