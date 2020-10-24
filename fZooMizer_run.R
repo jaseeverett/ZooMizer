@@ -1,6 +1,6 @@
 phyto_fixed <- function(params, n, n_pp, n_other, rates, dt, kappa=params@resource_params$kappa, lambda=params@resource_params$lambda, ... ) {
   npp <- kappa*params@w_full^(-lambda) #returns the fixed spectrum at every time step
-  npp[params@w_full > params@resource_params$w_pp_cutoff] <- 0
+  npp[params@w_full > params@resource_params$w_pp_cutoff* (1 - 1e-06)] <- 0
   return(npp)
 }
 
@@ -50,20 +50,20 @@ setZooMizerConstants <- function(params, Groups, sst){
     ## Senescence mortality
     if(params@species_params$Type[i] == "Zooplankton"){
       M_sb[i,] <- ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
-      M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
-      M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
+      M_sb[i, params@species_params$w_inf[i] < params@w * (1 + 1e-06)] <- 0
+      M_sb[i, params@species_params$w_mat[i] > params@w * (1 - 1e-06)] <- 0
     }
     
     if(params@species_params$Type[i] == "Fish"){
       M_sb[i,] <- 0.1*ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
-      M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
-      M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
+      M_sb[i, params@species_params$w_inf[i] < params@w * (1 + 1e-06)] <- 0
+      M_sb[i, params@species_params$w_mat[i] > params@w * (1 - 1e-06)] <- 0
     }
     
     ### Search volume
     SearchVol[i,] <- (params@species_params$gamma[i])*(params@w^(params@species_params$q[i]))
-    SearchVol[i, params@species_params$w_inf[i] < params@w] <- 0
-    SearchVol[i, params@species_params$w_min[i] > params@w] <- 0
+    SearchVol[i, params@species_params$w_inf[i] < params@w * (1 + 1e-06)] <- 0
+    SearchVol[i, params@species_params$w_min[i] > params@w * (1 - 1e-06)] <- 0
     
     ### Predation Kernels
     if(is.na(params@species_params$PPMRscale[i]) == FALSE){ # If group has an m-value (zooplankton)
