@@ -118,11 +118,11 @@ setZooMizerConstants <- function(params, Groups, sst){
   # For each group, set densities at w > Winf and w < Wmin to 0
   tempN[unlist(tapply(round(log10(params@w), digits = 2), 1:length(params@w), function(wx,Winf) Winf < wx, Winf = log10(params@species_params$w_inf)))] <- 0
   tempN[unlist(tapply(round(log10(params@w), digits = 2), 1:length(params@w), function(wx,Wmin) Wmin > wx, Wmin = log10(params@species_params$w_min)))] <- 0
-  dimnames(tempN) <- dimnames(params@initial_n)
-  params@initial_n <- tempN
+  #dimnames(tempN) <- dimnames(params@initial_n)
+  params@initial_n[] <- tempN
   
   params <- setExtMort(params, z0 = M_sb)
-  params <- setSearchVolume(params, SearchVol)
+  params <- setSearchVolume(params, search_vol = SearchVol)
   params <- setPredKernel(params, pred_kernel)
   
   return(params)
@@ -170,26 +170,26 @@ new_project_simple <- function(params, n, n_pp, n_other, t, dt, steps,
     # Update other components
     n_other_current <- n_other  # So that the resource dynamics can still 
     # use the current value
-    for (component in names(params@other_dynamics)) {
-      n_other[[component]] <-
-        other_dynamics_fns[[component]](
-          params,
-          n = n,
-          n_pp = n_pp,
-          n_other = n_other_current,
-          rates = r,
-          t = t,
-          dt = dt,
-          component = component,
-          ...
-        )
-    }
+    # for (component in names(params@other_dynamics)) {
+    #   n_other[[component]] <-
+    #     other_dynamics_fns[[component]](
+    #       params,
+    #       n = n,
+    #       n_pp = n_pp,
+    #       n_other = n_other_current,
+    #       rates = r,
+    #       t = t,
+    #       dt = dt,
+    #       component = component,
+    #       ...
+    #     )
+    # }
     
     # Update resource
-    n_pp <- resource_dynamics_fn(params, n = n, n_pp = n_pp,
-                                 n_other = n_other_current, rates = r,
-                                 t = t, dt = dt, ...)
-    
+    # n_pp <- resource_dynamics_fn(params, n = n, n_pp = n_pp,
+    #                              n_other = n_other_current, rates = r,
+    #                              t = t, dt = dt, ...)
+    n_pp <- n_pp
     # Iterate species one time step forward:
     # a_{ij} = - g_i(w_{j-1}) / dw_j dt
     a[, idx] <- sweep(-r$e_growth[, idx - 1, drop = FALSE] * dt, 2,
@@ -211,7 +211,8 @@ new_project_simple <- function(params, n, n_pp, n_other, t, dt, steps,
   
   # Update first and last size groups of n
   #TODO: Make this a little less hacky
-  n[1,1] <- params@species_params$Prop[1]*n_pp[length(params@w_full)-length(params@w)+1]
+  #n[1,1] <- params@species_params$Prop[1]*n_pp[length(params@w_full)-length(params@w)+1]
+  n[1,1] <- params@initial_n[1,1]
   n[1,w_max_idx[1]] <- 0
   for (i in 2:no_sp) {
     n[i, w_max_idx[i]] <- 0
@@ -333,7 +334,7 @@ fZooMizer_run <- function(groups, input){
                                      interaction=NULL, #NULL sets all to 1, no strict herbivores
                                      no_w = 178, #number of zoo+fish size classes;
                                      min_w_pp = 10^(-14.4), #minimum phyto size. Note: use -14.4, not -14.5, otherwise it makes an extra size class
-                                     w_pp_cutoff = 10^(input$phyto_max), #maximum phyto size
+                                     w_pp_cutoff = 10^(input$phyto_max)* (1 + 1e-06), #maximum phyto size
                                      n = 0.7, #The allometric growth exponent used in ZooMSS
                                      z0pre = 1, #external mortality (senescence)
                                      z0exp = 0.3,
@@ -344,7 +345,7 @@ fZooMizer_run <- function(groups, input){
                                      #pred_kernel = ... #probably easiest to just import this/pre-calculate it, once dimensions are worked out
   )
   
-  mf.params@initial_n[] <- readRDS("data/initialn.RDS")
+  #mf.params@initial_n[] <- readRDS("data/initialn.RDS")
   
   temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
   
@@ -363,7 +364,15 @@ fZooMizer_run <- function(groups, input){
   mf.params <- setRateFunction(mf.params, "Encounter", "new_Encounter")
   
   mf.params <- setReproduction(mf.params, repro_prop = matrix(0, nrow = nrow(mf.params@psi), ncol = ncol(mf.params@psi)))
-  mf.params <- setmort_test(mf.params, sst)
+  
+  
+  #mf.params <- setmort_test(mf.params, sst)
+  M_sb <- getExtMort(params)
+  M_sb[] <- readRDS("data/mu_b.RDS")
+  temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(params@species_params$species), ncol = length(params@w))
+  M_sb <- temp_eff * M_sb # Incorporate temp effect on senscence mortality
+  
+  mf.params <- setExtMort(mf.params, z0 = M_sb)
   
   sim <- project(mf.params, dt = dt, t_max = tmaxx)
   

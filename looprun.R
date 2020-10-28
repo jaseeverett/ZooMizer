@@ -9,8 +9,9 @@ assignInNamespace("project_simple", new_project_simple, ns = "mizer")
 Groups <- read.csv("data/TestGroups_mizer.csv")
 
 enviro <- readRDS("data/enviro_test20.RDS")
-enviro$dt <- 0.01
-enviro$tmaxx <- 1000
+enviro <- fZooMSS_CalculatePhytoParam(enviro)
+enviro$dt <- 001
+enviro$tmaxx <- 1.000
 
 assim_eff <- matrix(Groups$GrossGEscale * groups$Carbon, nrow = nrow(Groups), ncol = nrow(Groups))
 phyto_cc <- 0.1
@@ -38,7 +39,7 @@ for (i in 1:nrow(enviro)) {
 }
 
 zoomizeroutput <- zoomizergrid[[15]]
-saveRDS(zoomizeroutput,file="zoomizeroutputdt01.rds")
+saveRDS(zoomizeroutput,file="zoomizeroutputdt1.rds")
 
 saveRDS(zoomizergrid, file="test_grid.RDS", version = 2)
 
@@ -60,3 +61,9 @@ saveRDS(zoomizergrid, file="test_grid.RDS", version = 2)
 # }
 # 
 # saveRDS(zgrid, "zoomssgrid.rds")
+
+#library(assert_that)
+#are_equal(zoomsstest$model$N[1,,] / zoomsstest$model$param$w0, zoomizeroutput@params@initial_n[,], check.attributes=FALSE)
+all.equal(zoomsstest$model$M_sb, zoomizeroutput@params@mu_b, check.attributes=FALSE)
+are_equal(zoomsstest$model$nPP / zoomsstest$model$param$w_phyto,zoomizeroutput@n_pp[1,1:64], check.attributes=FALSE)
+

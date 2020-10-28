@@ -1,0 +1,67 @@
+---
+title: "Comparing ZooMSS and ZooMizer"
+author: Patrick Sykes and Julia L. Blanchard
+date: July 22, 2020
+place: Brisbane
+output: html_notebook
+---
+
+
+```{r setup}
+source("fZooMSS_Model.R") #source the model code
+source("fZooMSS_CalculatePhytoParam.R")
+
+## Build environmental data
+enviro <- readRDS("data/enviro_test20.RDS")
+enviro_data <- fZooMSS_CalculatePhytoParam(enviro) # Calculate Phytoplankton Parameters
+Groups <- read.csv("TestGroups.csv")
+
+input_params <- enviro_data[15,]
+input_params$dt <- 1
+input_params$tmax <- 1
+
+zoomsstest$model$model_runtime <- system.time(
+  zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
+)
+
+input_params$tmaxx <- input_params$tmax
+
+source("fZooMizer_run.R")
+groups <- read.csv("data/TestGroups_mizer.csv")
+
+zoomizertest <- fZooMizer_run(groups = groups, input = input_params)
+```
+
+Let's try and look at some comparisons...
+
+```{r}
+all.equal(zoomsstest$model$N[1,,] / zoomsstest$model$param$w, zoomizeroutput@params@initial_n[,], check.attributes=FALSE)
+all.equal(zoomsstest$model$M_sb, zoomizeroutput@params@mu_b, check.attributes=FALSE)
+all.equal(zoomsstest$model$nPP / zoomsstest$model$param$w_phyto,zoomizeroutput@n_pp[1,1:64], check.attributes=FALSE)
+
+all.equal(zoomsstest$model$param$w, zoomizeroutput@params@w, check.attributes=FALSE)
+#zoomsstest$model$param$w- zoomizeroutput@params@w
+#zoomizeroutput@params@search_vol
+
+
+
+all.equal(zoomsstest$model$N[2,,] / zoomsstest$model$param$w, zoomizeroutput@n[2,,], check.attributes=FALSE)
+```
+
+Consider the search volumes:
+
+```{r}
+
+SearchVol <- matrix(NA, nrow = zoomsstest$model$param$ngrps, ncol = zoomsstest$model$param$ngrid)
+for(i in 1:param$ngrps){
+        ### Search volume
+    SearchVol[i,] <- (zoomsstest$model$param$Groups$SearchCoef[i])*(zoomsstest$model$param$w^(zoomsstest$model$param$Groups$SearchExp[i]))
+    SearchVol[i, 10^(zoomsstest$model$param$Groups$Wmax[i]) < zoomsstest$model$param$w * (1 + 1e-06)] <- 0
+    SearchVol[i, 10^(zoomsstest$model$param$Groups$W0[i]) > zoomsstest$model$param$w * (1 - 1e-06)] <- 0
+}
+
+all.equal(SearchVol, zoomizeroutput@params@search_vol, check.attributes=FALSE)
+
+
+```
+
