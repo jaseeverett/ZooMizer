@@ -354,7 +354,7 @@ fZooMizer_run <- function(groups, input){
   mf.params@other_params$temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
   
   mf.params <- setZooMizerConstants(params = mf.params, Groups = groups, sst = input$sst)
-  mf.params@initial_n[] <- readRDS("data/initialn.RDS")
+  #mf.params@initial_n[] <- readRDS("data/initialn.RDS")
   
   #mf.params <- setParams(mf.params)
   

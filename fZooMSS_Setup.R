@@ -44,7 +44,7 @@ fZooMSS_Setup <- function(param){
   ## Makes the model object, full of constant functions for model
   model <- list(
     param = param,
-    nPP = 10^(param$phyto_int)*(param$w_phyto^(param$phyto_slope)), # Phytoplankton abundance spectrum
+    nPP = 10^(param$phyto_int)*(param$w_phyto^(param$phyto_slope-1)), # Phytoplankton abundance spectrum
 
     # Group parameters storage
     phyto_growthkernel = array(NA, dim = c(param$ngrps, param$ngrid, param$ngridPP)), # predation on phytoplankton
@@ -81,7 +81,7 @@ fZooMSS_Setup <- function(param){
   a_dynam <- 10^(param$phyto_int)*(param$w[1]^(param$phyto_slope+1)) # calculate coefficient for initial dynamic spectrum, so that N(w_phyto) equals N(w_dynam) at w[1]
 
   # Initial abundances form a continuation of the plankton spectrum, with a slope of -1
-  tempN <- matrix(a_dynam*(param$w)^-1, nrow = param$ngrps, ncol = param$ngrid, byrow = TRUE)
+  tempN <- matrix(a_dynam*(param$w)^-2, nrow = param$ngrps, ncol = param$ngrid, byrow = TRUE)
   props_z <- param$Groups$Prop[param$zoo_grps] # Zooplankton proportions
   tempN[param$zoo_grps,] <- props_z * tempN[param$zoo_grps,] # Set abundances of diff zoo groups based on smallest size class proportions
   tempN[param$fish_grps,] <- (1/param$num_fish) * tempN[param$fish_grps,] # Set abundandances of fish groups based on smallest size class proportions
