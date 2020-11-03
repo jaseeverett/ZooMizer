@@ -36,8 +36,8 @@ if (HPC == TRUE){
 all_params <- enviro_list[[ID]]
 
 input_params <- enviro_list[[1]]
-input_params$dt <- 0.1
-input_params$tmax <- 1
+input_params$dt <- 0.01
+input_params$tmax <- 1000
 
 zoomsstest$model$model_runtime <- system.time(
   zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)

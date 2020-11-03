@@ -112,8 +112,8 @@ fZooMSS_Run <- function(model){
     A_iter[,idx_iter] <- sweep(gg[, idx_iter - 1, drop = FALSE] * dt, 2, dx, "/") # Growth stuff
     B_iter[] <- 1 + sweep(gg * dt, 2, dx, "/") + dt * Z # Mortality
     S_iter[,idx_iter] <- N[,idx_iter] # N at.....
-    N_iter <- N # Current Abundance
-    N_iter[1,1] <- N[1,1] # This forces R to make a copy of the variable. Otherwise N is linked to N_iter in the Rcpp code and they change together.
+    #N_iter <- N # Current Abundance
+    #N_iter[1,1] <- N[1,1] # This forces R to make a copy of the variable. Otherwise N is linked to N_iter in the Rcpp code and they change together.
 
     # Numerical implementation matrices (for MvF WITH diffusion)
     
@@ -122,7 +122,7 @@ fZooMSS_Run <- function(model){
     #                        A_iter, C_iter, N_iter, S_iter,
     #                        A, B, C, N, S)
 
-    N <- inner_project_loop(no_sp = ngrps, no_w = ngrid, n = N_iter,
+    N <- inner_project_loop(no_sp = ngrps, no_w = ngrid, n = N,
                                  A = A_iter, B = B_iter, S = S_iter,
                                  w_min_idx = curr_min_size)
     # N <- fZooMSS_MvF_Rcpp(cngrps=ngrps, cN_iter=N_iter,

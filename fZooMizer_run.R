@@ -258,7 +258,7 @@ new_Encounter <- function(params, n, n_pp, n_other, t, ...) {
     c(1, 3), n_eff_prey, "*", check.margin = FALSE), dims = 2)
   # Eating the background
   # This line is a bottle neck
-  phi_prey_background <- assim_phyto * params@species_params$interaction_resource *
+  phi_prey_background <- params@other_params$assim_phyto * params@species_params$interaction_resource *
     rowSums(sweep(
       params@pred_kernel, 3, params@dw_full * params@w_full * n_pp,
       "*", check.margin = FALSE), dims = 2)
@@ -350,6 +350,8 @@ fZooMizer_run <- function(groups, input){
   temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
   
   mf.params@other_params$assim_eff <- setassim_eff(groups)
+  cc_phyto <- 0.1 #carbon content of phytoplankton
+  mf.params@other_params$assim_phyto <- mf.params@species_params$GrossGEscale * cc_phyto #assimilation efficiency when eating phytoplankton
   
   mf.params@other_params$temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
   
@@ -367,9 +369,9 @@ fZooMizer_run <- function(groups, input){
   
   
   #mf.params <- setmort_test(mf.params, sst)
-  M_sb <- getExtMort(params)
+  M_sb <- getExtMort(mf.params)
   M_sb[] <- readRDS("data/mu_b.RDS")
-  temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(params@species_params$species), ncol = length(params@w))
+  temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
   M_sb <- temp_eff * M_sb # Incorporate temp effect on senscence mortality
   
   mf.params <- setExtMort(mf.params, z0 = M_sb)

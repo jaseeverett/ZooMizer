@@ -53,7 +53,7 @@ theta <- readRDS("data/zoomss_inter.rds")[,-1]
 
 We will pass these parameters to mizer to set up a new multispecies model.
 
-TODO: adjust parameters here.
+<!-- TODO: adjust parameters here. -->
 
 ```{r}
 
@@ -200,7 +200,7 @@ Try running it:
 
 
 #mf.params <- setParams(mf.params)
-mf.params@mu_b <- readRDS("data/mu_b")
+mf.params@mu_b <- readRDS("data/mu_b.RDS")
 
 sim <- project(mf.params)
 plot(sim) #note feeding level means satiation - 0 since there's no satiation in this model.
@@ -464,8 +464,8 @@ hack <- sim2 #making a "fake" MizerSim object that we can use plots on.
 
 #match ZooMSS data to that collected from zoomizer
 enviro <- readRDS("data/enviro_test20.RDS")
-zoomssgrid <- readRDS("zoomssgrid.rds")
-zoomssgrid <- zoomssgrid[enviro$CellID]
+load("data/full_20200502_NoDiffusion_SaveTimeStep.RData")
+zoomssgrid <- res[enviro$CellID]
 
 w <- matrix(hack@params@w, nrow = nrow(hack@params@species_params), ncol = length(hack@params@w), byrow = TRUE)
 dw <- matrix(hack@params@dw, nrow = nrow(hack@params@species_params), ncol = length(hack@params@dw), byrow = TRUE)

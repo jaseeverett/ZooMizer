@@ -9,8 +9,8 @@ place: Brisbane
 
 
 ```{r setup}
-require(mizer)
-require(Rcpp)
+library(mizer)
+library(Rcpp)
 
 source("fZooMSS_Model.R") #source the model code
 source("fZooMSS_CalculatePhytoParam.R")
@@ -24,10 +24,12 @@ input_params <- enviro_data[15,]
 input_params$dt <- 1
 input_params$tmax <- 1
 
-zoomsstest <- list()
-zoomsstest$model$model_runtime <- system.time(
-  zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
-)
+# zoomsstest <- list()
+# zoomsstest$model$model_runtime <- system.time(
+#   zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
+# )
+# saveRDS(zoomsstest,"zoomssoutputdt1.rds")
+zoomsstest <- readRDS("zoomssoutputdt1.rds")
 
 input_params$tmaxx <- input_params$tmax
 
@@ -42,19 +44,19 @@ Let's try and look at some comparisons...
 ```{r}
 
 #weight vectors
-all.equal(zoomsstest$model$param$w, zoomizeroutput@params@w, check.attributes=FALSE)
-all.equal(zoomsstest$model$param$w_phyto, zoomizeroutput@params@w_full[1:64],check.attributes=FALSE)
+all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)
+all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:64],check.attributes=FALSE)
 
 #abundances
-all.equal(zoomsstest$model$nPP / zoomsstest$model$param$w_phyto,zoomizeroutput@n_pp[1,1:64], check.attributes=FALSE)
-all.equal(zoomsstest$model$N[1,,] / zoomsstest$model$param$w, zoomizeroutput@params@initial_n[,], check.attributes=FALSE)
+all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:64], check.attributes=FALSE)
+all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n, check.attributes=FALSE)
 
 #senescence mortality
-all.equal(zoomsstest$model$M_sb, zoomizeroutput@params@mu_b, check.attributes=FALSE)
+all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)
 
 
 #abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] / zoomsstest$model$param$w, zoomizeroutput@n[2,,], check.attributes=FALSE)
+all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,], check.attributes=FALSE)
 ```
 
 Consider the search volumes:
@@ -63,7 +65,7 @@ Consider the search volumes:
 
 #zoomss code
 SearchVol <- matrix(NA, nrow = zoomsstest$model$param$ngrps, ncol = zoomsstest$model$param$ngrid)
-for(i in 1:param$ngrps){
+for(i in 1:zoomsstest$model$param$ngrps){
         ### Search volume
     SearchVol[i,] <- (zoomsstest$model$param$Groups$SearchCoef[i])*(zoomsstest$model$param$w^(zoomsstest$model$param$Groups$SearchExp[i]))
     SearchVol[i, 10^(zoomsstest$model$param$Groups$Wmax[i]) < zoomsstest$model$param$w * (1 + 1e-06)] <- 0
@@ -71,13 +73,18 @@ for(i in 1:param$ngrps){
 }
 
 
-all.equal(SearchVol, zoomizeroutput@params@search_vol, check.attributes=FALSE)
+all.equal(SearchVol, zoomizertest@params@search_vol, check.attributes=FALSE)
 
 
 ```
 
+
+
+How about predation kernels?
+
 ```{r}
 param <- zoomsstest$model$param
+model <- zoomsstest$model
   
   gg_log_t_phyto <- ((param$w^-1) %*% t(param$w_phyto))/log(10) # Growth
   diff_log_t_phyto <- ((param$w^-2) %*% t(param$w_phyto^2))/log(10) # Diffusion
@@ -129,7 +136,7 @@ param <- zoomsstest$model$param
   ### Q10 OF 2 FOR ALL ZOO AND FISH
   temp_zoo <- rep(2.^((param$sst - 30)/10), param$num_zoo) # exp(23.93 - 0.59/(8.62e-05*(273+environ$sst)))
   temp_fish <- rep(2.^((param$sst - 30)/10), param$num_fish)
-  model$temp_eff <- matrix(c(temp_zoo, temp_fish), nrow = param$ngrps, ncol = param$ngrid)
+  temp_eff <- matrix(c(temp_zoo, temp_fish), nrow = param$ngrps, ncol = param$ngrid)
 
   #### CALCULATES CONSTANT BITS OF THE MODEL FUNCTIONS FOR EACH GROUP
   for(i in 1:param$ngrps){
@@ -192,8 +199,11 @@ param <- zoomsstest$model$param
                                             dynam_pred_weight_matrix)/param$Groups$FeedWidth[i])^2)/
         sqrt(2*pi*param$Groups$FeedWidth[i]^2)
     }
+    
 }
-predkernelzoomss <- apply(zoomsstest$model$dynam_dietkernel,4,'+')
-all.equal(predkernelzoomss,zoomizeroutput@params@psi) # different dimensions - how to compare?
+
+  zoomizerpredkernel <- getPredKernel(zoomizertest@params)
+  
+#all.equal(sp_dynam_predkernel[7,,],zoomizerpredkernel[7,,(216-178+1):216], check.attributes=FALSE) # different dimensions - how to compare?
   
 ```
