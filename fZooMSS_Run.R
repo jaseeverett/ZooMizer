@@ -4,7 +4,7 @@
 ##
 
 fZooMSS_Run <- function(model){
-  Rcpp::sourceCpp(file="inner_project_loop.cpp")
+
   # Pull out some useful parameters - just a shortcut
   param <- model$param
   dt <- model$param$dt
@@ -48,7 +48,7 @@ fZooMSS_Run <- function(model){
 
   # Matrices for MvF and MvF-D numeric solution
   A_iter <- matrix(0, nrow = ngrps, ncol = ngrid)
-  B_iter <- matrix(0, nrow = ngrps, ncol = ngrid)
+  C_iter <- matrix(0, nrow = ngrps, ncol = ngrid)
   S_iter <- matrix(0, nrow = ngrps, ncol = ngrid)
 
   A <- matrix(0, nrow = ngrps, ncol = ngrid)
@@ -95,11 +95,10 @@ fZooMSS_Run <- function(model){
     rm(sw2, ap2)
 
     ### DO DIFFUSION
-    # dim(dynam_diffkernel) <- c(ngrps*ngrid, ngrid)
-    # cs <- .colSums(diffusion_multiplier * t(dynam_diffkernel), m = ngrid, n = ngrps*ngrid)
-    # dim(cs) <- c(ngrps, ngrid)
-    # diff <- diff_phyto + cs
-    diff <- Z * 0
+    dim(dynam_diffkernel) <- c(ngrps*ngrid, ngrid)
+    cs <- .colSums(diffusion_multiplier * t(dynam_diffkernel), m = ngrid, n = ngrps*ngrid)
+    dim(cs) <- c(ngrps, ngrid)
+    diff <- diff_phyto + cs
 
     # sw3 <- sweep(dynam_diffkernel, 3, diffusion_multiplier, '*')
     # ap3 <- aperm(sw3, c(3,1,2))
@@ -109,22 +108,23 @@ fZooMSS_Run <- function(model){
 
     ### MvF WITH DIFFUSION ALGORITHM
     # Numerical implementation matrices (for MvF without diffusion)
-    A_iter[,idx_iter] <- sweep(gg[, idx_iter - 1, drop = FALSE] * dt, 2, dx, "/") # Growth stuff
-    B_iter[] <- 1 + sweep(gg * dt, 2, dx, "/") + dt * Z # Mortality
+    A_iter[,idx_iter] <- dt/dx * gg[,idx_iter-1] # Growth stuff
+    C_iter[,idx_iter] <- 1 + dt * Z[,idx_iter] + dt/dx * gg[,idx_iter] # Mortality
     S_iter[,idx_iter] <- N[,idx_iter] # N at.....
-    #N_iter <- N # Current Abundance
-    #N_iter[1,1] <- N[1,1] # This forces R to make a copy of the variable. Otherwise N is linked to N_iter in the Rcpp code and they change together.
+    N_iter <- N # Current Abundance
+    N_iter[1,1] <- N[1,1] # This forces R to make a copy of the variable. Otherwise N is linked to N_iter in the Rcpp code and they change together.
 
     # Numerical implementation matrices (for MvF WITH diffusion)
-    
-    # The original Base R code for the MvF equation
-    # N <- fZooMSS_MvF_BaseR(ngrps, curr_min_size, curr_max_size,
-    #                        A_iter, C_iter, N_iter, S_iter,
-    #                        A, B, C, N, S)
+    A[,idx] <- dt/dx * (gg[,idx-1] + diff[,idx-1] * (log(10)/2+1/(2*dx))) # Growth stuff
+    B[,idx] <- diff[,idx+1] * dt/(2*dx^2) # Diffusion term
+    C[,idx] <- 1 + dt * Z[,idx] + dt/dx*(gg[,idx] + diff[,idx] * (log(10)/2+1/dx)) # Mortality
+    S[,idx] <- N[,idx]
 
-    N <- inner_project_loop(no_sp = ngrps, no_w = ngrid, n = N,
-                                 A = -A_iter, B = B_iter, S = S_iter,
-                                 w_min_idx = curr_min_size)
+    # The original Base R code for the MvF equation
+    N <- fZooMSS_MvF_BaseR(ngrps, curr_min_size, curr_max_size,
+                            A_iter, C_iter, N_iter, S_iter,
+                            A, B, C, N, S)
+
     # N <- fZooMSS_MvF_Rcpp(cngrps=ngrps, cN_iter=N_iter,
     #                        cA_iter=A_iter, cC_iter=C_iter, cS_iter=S_iter,
     #                        cN=N, cA=A, cB=B, cC=C, cS=S,
@@ -153,7 +153,7 @@ fZooMSS_Run <- function(model){
 
     # Save results:
     if((itime %% param$isave) == 0){
-      isav <- itime/param$isave+1
+      isav <- itime/param$isave
 
       ## Phytoplankton diet
       pico_phyto_diet <- rowSums(model$diet_pico_phyto*N) # Pico-phytoplankton
