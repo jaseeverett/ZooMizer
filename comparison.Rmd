@@ -12,8 +12,8 @@ place: Brisbane
 library(mizer)
 library(Rcpp)
 
-setwd("~/GitHub/ZooMSS/")
-source("fZooMSS_Model.R") #source the model code
+source("../ZooMSS/fZooMSS_Model.R") #source the model code
+source("../ZooMSS/fZooMSS_Setup.R")
 source("fZooMSS_CalculatePhytoParam.R")
 setwd("~/GitHub/ZooMizer/")
 ## Build environmental data
@@ -24,6 +24,7 @@ Groups <- read.csv("TestGroups.csv")
 input_params <- enviro_data[15,]
 input_params$dt <- 1
 input_params$tmax <- 1
+SaveTimeSteps <- TRUE
 
 zoomsstest <- list()
 zoomsstest$model$model_runtime <- system.time(
@@ -42,23 +43,25 @@ zoomizertest <- fZooMizer_run(groups = groups, input = input_params)
 
 Let's try and look at some comparisons...
 
+# Initial values
+
+We want to check that the initial setups were all the same:
+
 ```{r}
 
 #weight vectors
 all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)
-all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:71],check.attributes=FALSE)
+all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zoomsstest$model$param$w_phyto)],check.attributes=FALSE)
 
 #abundances
-all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:71], check.attributes=FALSE)
+all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
 all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n, check.attributes=FALSE)
 
-#senescence mortality
-all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)
-
-
-#abundances after a time step?
+# quick check here: abundances after a time step?
 all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,], check.attributes=FALSE)
 ```
+
+# Predation
 
 Consider the search volumes:
 
@@ -78,8 +81,6 @@ all.equal(SearchVol, zoomizertest@params@search_vol, check.attributes=FALSE)
 
 
 ```
-
-
 
 How about predation kernels?
 
@@ -240,3 +241,11 @@ all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energ
 all.equal(zoomizeregrowth, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/d/dw, now mizer's N is in 1/g so perhaps this is the right conversion?
 ```
 
+# Mortality
+
+Do the mortality rates agree?
+
+```{r}
+all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)
+
+```
