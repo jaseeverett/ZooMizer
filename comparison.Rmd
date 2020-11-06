@@ -12,10 +12,10 @@ place: Brisbane
 library(mizer)
 library(Rcpp)
 
-source("../ZooMSS/fZooMSS_Model.R") #source the model code
-source("../ZooMSS/fZooMSS_Setup.R")
+source("fZooMSS_Model.R") #source the model code
+source("fZooMSS_Setup.R")
 source("fZooMSS_CalculatePhytoParam.R")
-setwd("~/GitHub/ZooMizer/")
+#setwd("~/GitHub/ZooMizer/")
 ## Build environmental data
 enviro <- readRDS("data/enviro_test20.RDS")
 enviro_data <- fZooMSS_CalculatePhytoParam(enviro) # Calculate Phytoplankton Parameters
@@ -51,14 +51,22 @@ We want to check that the initial setups were all the same:
 
 #weight vectors
 all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)
+
 all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zoomsstest$model$param$w_phyto)],check.attributes=FALSE)
 
-#abundances
-all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
-all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n, check.attributes=FALSE)
+#abundances - phyto
+all.equal(zoomsstest$model$nPP/zoomsstest$model$param$w_phyto ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
+
+#abundances - zoo and fish
+all.equal(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), zoomizertest@params@initial_n, check.attributes=FALSE)
+#View(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE))
+#View(zoomizertest@params@initial_n)
+
+initialnsaved <- readRDS("data/initialn.RDS")
+all.equal(zoomsstest$model$N[1,,] / zoomsstest$model$param$w, initialnsaved, check.attributes=FALSE)
 
 # quick check here: abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,], check.attributes=FALSE)
+all.equal(zoomsstest$model$N[2,,] / zoomsstest$model$param$w, zoomizertest@n[2,,], check.attributes=FALSE)
 ```
 
 # Predation
@@ -208,14 +216,18 @@ model <- zoomsstest$model
   dim(zoomizerpredkernel)
 #all.equal(sp_dynam_predkernel[7,,],zoomizerpredkernel[7,,(216-178+1):216], check.attributes=FALSE) # different dimensions - how to compare?
   
-  zoomizerdiet <- getDiet(zoomizeroutput@params, proportion = FALSE) #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
+  zoomizerdiet <- getDiet(zoomizertest@params, proportion = FALSE) #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
   #zoomssgrid[[1]]
   dim(zoomizerdiet)
   #dimnames(zoomizerdiet)
   #zoomizerdiet[,,13] #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
   dim(zoomsstest$model$phyto_dietkernel)
-  all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2])
-  all.equal(zoomsstest$model$phyto_dietkernel[,,1]*zoomizertest@n_pp[1,1:178], zoomizerdiet[,,13], check.attributes=FALSE)
+  
+all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2]) #sanity check
+
+
+
+all.equal(zoomsstest$model$phyto_dietkernel[,,1]*zoomizertest@n_pp[1,1:178], zoomizerdiet[,,13], check.attributes=FALSE)
   
 ```
 
@@ -238,7 +250,7 @@ zoomizerereprogrowth <- getEReproAndGrowth(zoomizertest@params)
 zoomizeregrowth <- getEGrowth(zoomizertest@params)
 all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro
 
-all.equal(zoomizeregrowth, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/d/dw, now mizer's N is in 1/g so perhaps this is the right conversion?
+all.equal(zoomizeregrowth/zoomizertest@params@w, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer's N is in 1/g so perhaps this is the right conversion?
 ```
 
 # Mortality
@@ -246,6 +258,13 @@ all.equal(zoomizeregrowth, gg, check.attributes=FALSE) #it was really close earl
 Do the mortality rates agree?
 
 ```{r}
+
+# View(zoomsstest$model$M_sb)
+# View(zoomizertest@params@mu_b)
 all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)
+
+which(zoomsstest$model$M_sb != zoomizertest@params@mu_b)
+
+# senescence mortality seems to differ at the maximum sizes - rounding error in sizes?
 
 ```

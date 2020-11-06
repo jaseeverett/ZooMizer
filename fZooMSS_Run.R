@@ -153,7 +153,7 @@ fZooMSS_Run <- function(model){
 
     # Save results:
     if((itime %% param$isave) == 0){
-      isav <- itime/param$isave
+      isav <- itime/param$isave+1
 
       ## Phytoplankton diet
       pico_phyto_diet <- rowSums(model$diet_pico_phyto*N) # Pico-phytoplankton

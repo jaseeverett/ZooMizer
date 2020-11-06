@@ -153,20 +153,20 @@ fZooMSS_Setup <- function(param){
     ## Senescence mortality
     if(param$Groups$Type[i] == "Zooplankton"){
       model$M_sb[i,] <- param$ZSpre*(param$w/(10^(param$Groups$Wmat[i])))^param$ZSexp
-      model$M_sb[i, 10^(param$Groups$Wmax[i]) < param$w] <- 0
+      model$M_sb[i, 10^(param$Groups$Wmax[i]) < param$w* (1 + 1e-06)] <- 0
       model$M_sb[i, 10^(param$Groups$Wmat[i]) > param$w] <- 0
     }
 
     if(param$Groups$Type[i] == "Fish"){
       model$M_sb[i,] <- 0.1*param$ZSpre*(param$w/(10^(param$Groups$Wmat[i])))^param$ZSexp
-      model$M_sb[i, 10^(param$Groups$Wmax[i]) < param$w] <- 0
+      model$M_sb[i, 10^(param$Groups$Wmax[i]) < param$w* (1 + 1e-06)] <- 0
       model$M_sb[i, 10^(param$Groups$Wmat[i]) > param$w] <- 0
     }
 
     ### Search volume
     SearchVol[i,] <- (param$Groups$SearchCoef[i])*(param$w^(param$Groups$SearchExp[i]))
-    SearchVol[i, 10^(param$Groups$Wmax[i]) < param$w] <- 0
-    SearchVol[i, 10^(param$Groups$W0[i]) > param$w] <- 0
+    SearchVol[i, 10^(param$Groups$Wmax[i]) < param$w * (1 + 1e-06)] <- 0
+    SearchVol[i, 10^(param$Groups$W0[i]) > param$w * (1 - 1e-06)] <- 0
 
     ### Predation Kernels
     if(param$Groups$Type[i] == "Zooplankton"){ # If group has an m-value (zooplankton)

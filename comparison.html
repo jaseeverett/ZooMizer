@@ -1643,8 +1643,9 @@ summary {
 library(Rcpp)</code></pre>
 <pre><code>## Warning: package &#39;Rcpp&#39; was built under R version 3.6.3</code></pre>
 <pre class="r"><code>source(&quot;fZooMSS_Model.R&quot;) #source the model code
+source(&quot;fZooMSS_Setup.R&quot;)
 source(&quot;fZooMSS_CalculatePhytoParam.R&quot;)
-
+#setwd(&quot;~/GitHub/ZooMizer/&quot;)
 ## Build environmental data
 enviro &lt;- readRDS(&quot;data/enviro_test20.RDS&quot;)
 enviro_data &lt;- fZooMSS_CalculatePhytoParam(enviro) # Calculate Phytoplankton Parameters
@@ -1653,12 +1654,41 @@ Groups &lt;- read.csv(&quot;TestGroups.csv&quot;)
 input_params &lt;- enviro_data[15,]
 input_params$dt &lt;- 1
 input_params$tmax &lt;- 1
+SaveTimeSteps &lt;- TRUE
 
-# zoomsstest &lt;- list()
-# zoomsstest$model$model_runtime &lt;- system.time(
-#   zoomsstest &lt;- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
-# )
-# saveRDS(zoomsstest,&quot;zoomssoutputdt1.rds&quot;)
+zoomsstest &lt;- list()
+zoomsstest$model$model_runtime &lt;- system.time(
+ zoomsstest &lt;- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
+)</code></pre>
+<pre><code>## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used</code></pre>
+<pre><code>## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used
+
+## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used
+
+## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used
+
+## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used
+
+## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used
+
+## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used
+
+## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used
+
+## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
+## length &gt; 1 and only the first element will be used</code></pre>
+<pre><code>## 
+  |                                                                            
+  |======================================================================| 100%</code></pre>
+<pre class="r"><code>saveRDS(zoomsstest,&quot;zoomssoutputdt1.rds&quot;)
 zoomsstest &lt;- readRDS(&quot;zoomssoutputdt1.rds&quot;)
 
 input_params$tmaxx &lt;- input_params$tmax
@@ -1669,22 +1699,32 @@ groups &lt;- read.csv(&quot;data/TestGroups_mizer.csv&quot;)
 zoomizertest &lt;- fZooMizer_run(groups = groups, input = input_params)</code></pre>
 <pre><code>## Note: Using z0 = z0pre * w_inf ^ z0exp for missing z0 values.</code></pre>
 <p>Let’s try and look at some comparisons…</p>
+<div id="initial-values" class="section level1">
+<h1>Initial values</h1>
+<p>We want to check that the initial setups were all the same:</p>
 <pre class="r"><code>#weight vectors
 all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:64],check.attributes=FALSE)</code></pre>
+<pre class="r"><code>all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zoomsstest$model$param$w_phyto)],check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>#abundances
-all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:64], check.attributes=FALSE)</code></pre>
+<pre class="r"><code>#abundances - phyto
+all.equal(zoomsstest$model$nPP/zoomsstest$model$param$w_phyto ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)], check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n, check.attributes=FALSE)</code></pre>
+<pre class="r"><code>#abundances - zoo and fish
+all.equal(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), zoomizertest@params@initial_n, check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>#senescence mortality
-all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)</code></pre>
+<pre class="r"><code>#View(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE))
+#View(zoomizertest@params@initial_n)
+
+initialnsaved &lt;- readRDS(&quot;data/initialn.RDS&quot;)
+all.equal(zoomsstest$model$N[1,,] / zoomsstest$model$param$w, initialnsaved, check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>#abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,], check.attributes=FALSE)</code></pre>
-<pre><code>## [1] &quot;Mean relative difference: 1.000531&quot;</code></pre>
+<pre class="r"><code># quick check here: abundances after a time step?
+all.equal(zoomsstest$model$N[2,,] / zoomsstest$model$param$w, zoomizertest@n[2,,], check.attributes=FALSE)</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 0.9954925&quot;</code></pre>
+</div>
+<div id="predation" class="section level1">
+<h1>Predation</h1>
 <p>Consider the search volumes:</p>
 <pre class="r"><code>#zoomss code
 SearchVol &lt;- matrix(NA, nrow = zoomsstest$model$param$ngrps, ncol = zoomsstest$model$param$ngrid)
@@ -1819,8 +1859,67 @@ model &lt;- zoomsstest$model
 }
 
   zoomizerpredkernel &lt;- getPredKernel(zoomizertest@params)
+  dim(zoomizerpredkernel)</code></pre>
+<pre><code>## [1]  12 178 216</code></pre>
+<pre class="r"><code>#all.equal(sp_dynam_predkernel[7,,],zoomizerpredkernel[7,,(216-178+1):216], check.attributes=FALSE) # different dimensions - how to compare?
   
-#all.equal(sp_dynam_predkernel[7,,],zoomizerpredkernel[7,,(216-178+1):216], check.attributes=FALSE) # different dimensions - how to compare?</code></pre>
+  zoomizerdiet &lt;- getDiet(zoomizertest@params, proportion = FALSE) #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, &quot;*&quot;), dims = 2)
+  #zoomssgrid[[1]]
+  dim(zoomizerdiet)</code></pre>
+<pre><code>## [1]  12 178  13</code></pre>
+<pre class="r"><code>  #dimnames(zoomizerdiet)
+  #zoomizerdiet[,,13] #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, &quot;*&quot;), dims = 2)
+  dim(zoomsstest$model$phyto_dietkernel)</code></pre>
+<pre><code>## [1]  12 178  71</code></pre>
+<pre class="r"><code>all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2]) #sanity check</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(zoomsstest$model$phyto_dietkernel[,,1]*zoomizertest@n_pp[1,1:178], zoomizerdiet[,,13], check.attributes=FALSE)</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 161.5431&quot;</code></pre>
+<p>Trying with the actual growth matrices. Mizer uses g/yr as its units. What are the units for ZooMSS?</p>
+<pre class="r"><code>    growth_multiplier &lt;- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
+    predation_multiplier &lt;- model$N[1,,] * model$temp_eff # n_species x n_sizes
+    #diffusion_multiplier &lt;- colSums(N * (assim_eff^2)) # 1 x n_sizes
+
+    ### DO GROWTH
+    dynam_growthkernel &lt;- model$dynam_growthkernel
+    dim(dynam_growthkernel) &lt;- c(model$param$ngrps*model$param$ngrid, model$param$ngrid)
+    cs &lt;- .colSums(growth_multiplier * t(dynam_growthkernel), m = model$param$ngrid, n = model$param$ngrps*model$param$ngrid)
+    dim(cs) &lt;- c(model$param$ngrps, model$param$ngrid)
+    gg &lt;- model$ingested_phyto + cs
+    
+zoomizererepro &lt;- getERepro(zoomizertest@params) #all 0 as expected
+zoomizerereprogrowth &lt;- getEReproAndGrowth(zoomizertest@params)
+zoomizeregrowth &lt;- getEGrowth(zoomizertest@params)
+all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(zoomizeregrowth/zoomizertest@params@w, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer&#39;s N is in 1/g so perhaps this is the right conversion?</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 1&quot;</code></pre>
+</div>
+<div id="mortality" class="section level1">
+<h1>Mortality</h1>
+<p>Do the mortality rates agree?</p>
+<pre class="r"><code># View(zoomsstest$model$M_sb)
+# View(zoomizertest@params@mu_b)
+all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 0.1117337&quot;</code></pre>
+<pre class="r"><code>which(zoomsstest$model$M_sb != zoomizertest@params@mu_b)</code></pre>
+<pre><code>##   [1]  325  326  337  338  385  386  397  398  445  446  457  458  469  470  494
+##  [16]  506  530  628  640  652  663  664  675  676  687  688  699  700  711  712
+##  [31]  723  724  735  736  747  748  749  759  760  761  771  772  773  783  784
+##  [46]  785  795  796  797  807  808  809  819  820  821  831  832  833  843  844
+##  [61]  845  855  856  857  867  868  869  879  881  891  893  903  905  917  929
+##  [76]  941  943  953  955  965  967  989  991 1003 1015 1051 1063 1074 1075 1110
+##  [91] 1111 1122 1123 1134 1135 1158 1159 1170 1171 1182 1183 1194 1218 1220 1230
+## [106] 1232 1242 1244 1254 1256 1278 1280 1290 1292 1293 1294 1302 1304 1305 1306
+## [121] 1314 1316 1317 1318 1328 1329 1330 1340 1341 1342 1352 1353 1354 1364 1365
+## [136] 1366 1376 1377 1378 1388 1389 1390 1400 1401 1402 1412 1413 1414 1424 1425
+## [151] 1426 1436 1437 1438 1448 1449 1450 1461 1462 1473 1474 1485 1486 1497 1498
+## [166] 1509 1510 1521 1522 1533 1534 1535 1547 1559 1571 1583 1595 1607 1619 1631
+## [181] 1643 1655 1667 1679 1691 1703 1715 1727 1739 1751 1763 1775 1776 1788 1800
+## [196] 1812 1824 1836 1848 1860 1872 1884 1896 1908 1920 1932 1944 1968 1980 2004
+## [211] 2028 2040 2064 2088 2100 2124 2136</code></pre>
+<pre class="r"><code># senescence mortality seems to differ at the maximum sizes - rounding error in sizes?</code></pre>
+</div>
 
 
 
