@@ -14,7 +14,10 @@ jobname <- '202000930_zoomizercomparison' #job name used on queue
 ## Build environmental data
 enviro <- readRDS("data/enviro_test20.RDS")
 enviro_data <- fZooMSS_CalculatePhytoParam(enviro) # Calculate Phytoplankton Parameters
-enviro_data$dt
+
+enviro_data$dt <- 0.01
+enviro_data$tmax <- 500
+enviro_data$tmaxx <- enviro_data$tmax
 saveRDS(enviro_data, "enviro_Matrix.RDS")
 
 # NOW WE BREAK THIS UP INTO CHUNKS OF 10 RUNS AND CREATE A LIST
@@ -26,26 +29,23 @@ SaveTimeSteps <- TRUE # Should we save all time steps
 
 Groups <- read.csv("TestGroups.csv", stringsAsFactors = FALSE) # Load in functional group information
 
-### No need to change anything below here.
-if (HPC == TRUE){
-  ID <- as.integer(Sys.getenv('PBS_ARRAY_INDEX')) # Get the array run number on HPC
-} else {
-  ID <- enviro_row
+zoomssgrid <- list()
+
+for (i in 1:length(enviro_list)) {
+  
+  input_params <- enviro_list[[i]]
+  zoomsstest <- list()
+  zoomsstest$model$model_runtime <- system.time(
+    zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
+  )
+  zoomssgrid[[i]] <- zoomsstest
 }
 
-all_params <- enviro_list[[ID]]
+saveRDS(zoomssgrid, "zoomssgrid.RDS")
 
-input_params <- enviro_list[[1]]
-input_params$dt <- 0.01
-input_params$tmax <- 1000
 
-zoomsstest$model$model_runtime <- system.time(
-  zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
-)
 
-input_params$tmaxx <- input_params$tmax
+#source("fZooMizer_run.R")
+#groups <- read.csv("data/TestGroups_mizer.csv")
 
-source("fZooMizer_run.R")
-groups <- read.csv("data/TestGroups_mizer.csv")
-
-zoomizertest <- fZooMizer_run(groups = groups, input = input_params)
+#zoomizertest <- fZooMizer_run(groups = groups, input = input_params)

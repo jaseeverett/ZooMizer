@@ -78,7 +78,7 @@ fZooMSS_Setup <- function(param){
   model$assim_eff = matrix(param$Groups$GrossGEscale * param$Groups$Carbon, nrow = param$ngrps, ncol = length(model$param$w))
 
   #### INITIAL DYNAMIC POPULATION ABUNDANCES
-  a_dynam <- 10^(param$phyto_int)*(param$w[1]^(param$phyto_slope+1)) # calculate coefficient for initial dynamic spectrum, so that N(w_phyto) equals N(w_dynam) at w[1]
+  a_dynam <- 10^(param$phyto_int)*(param$w[1]^(param$phyto_slope-1)) # calculate coefficient for initial dynamic spectrum, so that N(w_phyto) equals N(w_dynam) at w[1]
 
   # Initial abundances form a continuation of the plankton spectrum, with a slope of -1
   tempN <- matrix(a_dynam*(param$w)^-2, nrow = param$ngrps, ncol = param$ngrid, byrow = TRUE)

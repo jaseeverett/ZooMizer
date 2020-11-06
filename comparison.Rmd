@@ -12,9 +12,10 @@ place: Brisbane
 library(mizer)
 library(Rcpp)
 
+setwd("~/GitHub/ZooMSS/")
 source("fZooMSS_Model.R") #source the model code
 source("fZooMSS_CalculatePhytoParam.R")
-
+setwd("~/GitHub/ZooMizer/")
 ## Build environmental data
 enviro <- readRDS("data/enviro_test20.RDS")
 enviro_data <- fZooMSS_CalculatePhytoParam(enviro) # Calculate Phytoplankton Parameters
@@ -24,11 +25,11 @@ input_params <- enviro_data[15,]
 input_params$dt <- 1
 input_params$tmax <- 1
 
-# zoomsstest <- list()
-# zoomsstest$model$model_runtime <- system.time(
-#   zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
-# )
-# saveRDS(zoomsstest,"zoomssoutputdt1.rds")
+zoomsstest <- list()
+zoomsstest$model$model_runtime <- system.time(
+ zoomsstest <- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
+)
+saveRDS(zoomsstest,"zoomssoutputdt1.rds")
 zoomsstest <- readRDS("zoomssoutputdt1.rds")
 
 input_params$tmaxx <- input_params$tmax
@@ -45,10 +46,10 @@ Let's try and look at some comparisons...
 
 #weight vectors
 all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)
-all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:64],check.attributes=FALSE)
+all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:71],check.attributes=FALSE)
 
 #abundances
-all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:64], check.attributes=FALSE)
+all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:71], check.attributes=FALSE)
 all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n, check.attributes=FALSE)
 
 #senescence mortality
@@ -203,7 +204,39 @@ model <- zoomsstest$model
 }
 
   zoomizerpredkernel <- getPredKernel(zoomizertest@params)
-  
+  dim(zoomizerpredkernel)
 #all.equal(sp_dynam_predkernel[7,,],zoomizerpredkernel[7,,(216-178+1):216], check.attributes=FALSE) # different dimensions - how to compare?
   
+  zoomizerdiet <- getDiet(zoomizeroutput@params, proportion = FALSE) #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
+  #zoomssgrid[[1]]
+  dim(zoomizerdiet)
+  #dimnames(zoomizerdiet)
+  #zoomizerdiet[,,13] #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
+  dim(zoomsstest$model$phyto_dietkernel)
+  all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2])
+  all.equal(zoomsstest$model$phyto_dietkernel[,,1]*zoomizertest@n_pp[1,1:178], zoomizerdiet[,,13], check.attributes=FALSE)
+  
 ```
+
+Trying with the actual growth matrices. Mizer uses g/yr as its units. What are the units for ZooMSS?
+
+```{r}
+    growth_multiplier <- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
+    predation_multiplier <- model$N[1,,] * model$temp_eff # n_species x n_sizes
+    #diffusion_multiplier <- colSums(N * (assim_eff^2)) # 1 x n_sizes
+
+    ### DO GROWTH
+    dynam_growthkernel <- model$dynam_growthkernel
+    dim(dynam_growthkernel) <- c(model$param$ngrps*model$param$ngrid, model$param$ngrid)
+    cs <- .colSums(growth_multiplier * t(dynam_growthkernel), m = model$param$ngrid, n = model$param$ngrps*model$param$ngrid)
+    dim(cs) <- c(model$param$ngrps, model$param$ngrid)
+    gg <- model$ingested_phyto + cs
+    
+zoomizererepro <- getERepro(zoomizertest@params) #all 0 as expected
+zoomizerereprogrowth <- getEReproAndGrowth(zoomizertest@params)
+zoomizeregrowth <- getEGrowth(zoomizertest@params)
+all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro
+
+all.equal(zoomizeregrowth, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/d/dw, now mizer's N is in 1/g so perhaps this is the right conversion?
+```
+

@@ -107,7 +107,7 @@ setZooMizerConstants <- function(params, Groups, sst){
   params@initial_n_pp[params@w_full > params@resource_params$w_pp_cutoff] <- 0
   
   
-  a_dynam <- (params@resource_params$kappa)*(params@w[1]^(2-params@resource_params$lambda)) # calculate coefficient for initial dynamic spectrum, so that N(w_phyto) equals N(w_dynam) at w[1]
+  a_dynam <- (params@resource_params$kappa)*(params@w[1]^(-params@resource_params$lambda)) # calculate coefficient for initial dynamic spectrum, so that N(w_phyto) equals N(w_dynam) at w[1]
   
   # Initial abundances form a continuation of the plankton spectrum, with a slope of -1
   tempN <- matrix(a_dynam*(params@w)^-2, nrow = nrow(params@species_params), ncol = length(params@w), byrow = TRUE)
@@ -304,8 +304,7 @@ new_PredRate <- function (params, n, n_pp, n_other, t, feeding_level, ...)
 
 new_EReproAndGrowth <- function (params, n, n_pp, n_other, t, encounter, feeding_level, ...) 
 {
-  sweep((1 - feeding_level) * encounter * params@other_params$temp_eff, 1, params@species_params$alpha, 
-        "*", check.margin = FALSE) - params@metab
+  encounter * params@other_params$temp_eff - params@metab
 }
 
 newFeedingLevel <- function (params, n, n_pp, n_other, t, encounter, ...) 

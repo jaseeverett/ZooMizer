@@ -522,9 +522,10 @@ testdf$chlo <- enviro$chlo[1:nrow(testdf)]
   geom_point())
 ggsave("zoomizer_tcb_vs_chlo.png", chlotcb)
 
-fit <- lm(testdf$zoomizertcb~testdf$zoomsstcb)
+fit <- lm(log10(testdf$zoomizertcb)~log10(testdf$zoomsstcb))
 
 
 ```
+
 
 

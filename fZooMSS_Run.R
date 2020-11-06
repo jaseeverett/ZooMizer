@@ -123,7 +123,7 @@ fZooMSS_Run <- function(model){
     #                        A, B, C, N, S)
 
     N <- inner_project_loop(no_sp = ngrps, no_w = ngrid, n = N,
-                                 A = A_iter, B = B_iter, S = S_iter,
+                                 A = -A_iter, B = B_iter, S = S_iter,
                                  w_min_idx = curr_min_size)
     # N <- fZooMSS_MvF_Rcpp(cngrps=ngrps, cN_iter=N_iter,
     #                        cA_iter=A_iter, cC_iter=C_iter, cS_iter=S_iter,
