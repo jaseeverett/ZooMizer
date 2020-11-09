@@ -7,6 +7,12 @@ output:
 place: Brisbane
 ---
 
+# Introduction
+
+Here we are trying to compare the original code ZooMSS model (version 2, Heneghan et al. 2020) with ZooMizer, an attempt at recreating it within the mizer package.
+
+We start by initialising and running the two models.
+
 
 ```{r setup}
 library(mizer)
@@ -45,33 +51,70 @@ Let's try and look at some comparisons...
 
 # Initial values
 
-We want to check that the initial setups were all the same:
+We want to check that the initial setups were all the same. the `all.equal` function tests the 'near equality' of two objects, that is, whether the objects are equal to within a tolerance (by default the tolerance is 1.5e-8). It's appropriate to use that here to allow for small floating point errors introduced by unit conversions and converting back and forth between absolute and logged values.
 
 ```{r}
 
-#weight vectors
+#weight vectors (i.e. size classes)
 all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)
 
 all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zoomsstest$model$param$w_phyto)],check.attributes=FALSE)
 
-#abundances - phyto
-all.equal(zoomsstest$model$nPP/zoomsstest$model$param$w_phyto ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
+#abundances - phyto - dimensions time x weight
+all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)] * zoomizertest@params@dw_full[1:1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
 
-#abundances - zoo and fish
-all.equal(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), zoomizertest@params@initial_n, check.attributes=FALSE)
+#abundances - zoo and fish. Note N is in dimensions time x weight x species
+all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomizertest@params@dw,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), check.attributes=FALSE)
 #View(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE))
 #View(zoomizertest@params@initial_n)
 
 initialnsaved <- readRDS("data/initialn.RDS")
-all.equal(zoomsstest$model$N[1,,] / zoomsstest$model$param$w, initialnsaved, check.attributes=FALSE)
+all.equal(zoomsstest$model$N[1,,] , initialnsaved * zoomizertest@params@dw, check.attributes=FALSE)
 
 # quick check here: abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] / zoomsstest$model$param$w, zoomizertest@n[2,,], check.attributes=FALSE)
+all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,] * zoomizertest@params@dw, check.attributes=FALSE)
 ```
 
-# Predation
+So we have that the size classes and initial abundance values (taking into account that ZooMSS is in absolute abundance and ZooMizer is in normalised abundance) are all in agreement. However, after a single time step they differ by a lot! Let's look into what might be doing this.
 
-Consider the search volumes:
+Recall the McKendrick-von Foerster equation
+
+$$ \frac{\partial}{\partial t} N_i(w,t) = - \frac{\partial}{\partial w} (g_i(w,t) N_i(w,t)) - \mu_i(w,t)N_i(w,t), $$
+where $g_i$ is growth (which is due to feeding) and $\mu_i$ is mortality (due to senescence and predation).
+
+Let's look at the first term on the right-hand side: growth.
+
+# Growth due to feeding
+
+Trying with the actual growth matrices. Both Mizer and ZooMSS use g/yr as the units.
+
+```{r}
+    growth_multiplier <- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
+    predation_multiplier <- model$N[1,,] * model$temp_eff # n_species x n_sizes
+    #diffusion_multiplier <- colSums(N * (assim_eff^2)) # 1 x n_sizes
+
+    ### DO GROWTH
+    dynam_growthkernel <- model$dynam_growthkernel
+    dim(dynam_growthkernel) <- c(model$param$ngrps*model$param$ngrid, model$param$ngrid)
+    cs <- .colSums(growth_multiplier * t(dynam_growthkernel), m = model$param$ngrid, n = model$param$ngrps*model$param$ngrid)
+    dim(cs) <- c(model$param$ngrps, model$param$ngrid)
+    gg <- model$ingested_phyto + cs
+    
+zoomizererepro <- getERepro(zoomizertest@params) #all 0 as expected
+zoomizerereprogrowth <- getEReproAndGrowth(zoomizertest@params)
+zoomizeregrowth <- getEGrowth(zoomizertest@params)
+all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro
+
+all.equal(zoomizeregrowth, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer's N is in 1/g so perhaps this is the right conversion?
+```
+
+Looking at the matrices, it's clearly not right. Though it's not completely clear whether the difference abundance units may be affecting this. Consider the function for growth:
+
+$$ g_i(w,t) = \tau \sum_{j} 2.5 C_j V_i(w)\int_{w_p}^{w} \phi_i (w,w')N_j(w',t)w'dw' $$
+
+The growth in ZooMSS is calculated from the search volume $V_i(w)$, prey size selectivity function $\phi_i(w,w')$, prey carbon content $C_j$ and temperature effect constant $\tau$. Let's look at these one at a time:
+
+## Search volume
 
 ```{r}
 
@@ -87,10 +130,9 @@ for(i in 1:zoomsstest$model$param$ngrps){
 
 all.equal(SearchVol, zoomizertest@params@search_vol, check.attributes=FALSE)
 
-
 ```
 
-How about predation kernels?
+These are in agreement. How about feeding kernels?
 
 ```{r}
 param <- zoomsstest$model$param
@@ -231,27 +273,6 @@ all.equal(zoomsstest$model$phyto_dietkernel[,,1]*zoomizertest@n_pp[1,1:178], zoo
   
 ```
 
-Trying with the actual growth matrices. Mizer uses g/yr as its units. What are the units for ZooMSS?
-
-```{r}
-    growth_multiplier <- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
-    predation_multiplier <- model$N[1,,] * model$temp_eff # n_species x n_sizes
-    #diffusion_multiplier <- colSums(N * (assim_eff^2)) # 1 x n_sizes
-
-    ### DO GROWTH
-    dynam_growthkernel <- model$dynam_growthkernel
-    dim(dynam_growthkernel) <- c(model$param$ngrps*model$param$ngrid, model$param$ngrid)
-    cs <- .colSums(growth_multiplier * t(dynam_growthkernel), m = model$param$ngrid, n = model$param$ngrps*model$param$ngrid)
-    dim(cs) <- c(model$param$ngrps, model$param$ngrid)
-    gg <- model$ingested_phyto + cs
-    
-zoomizererepro <- getERepro(zoomizertest@params) #all 0 as expected
-zoomizerereprogrowth <- getEReproAndGrowth(zoomizertest@params)
-zoomizeregrowth <- getEGrowth(zoomizertest@params)
-all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro
-
-all.equal(zoomizeregrowth/zoomizertest@params@w, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer's N is in 1/g so perhaps this is the right conversion?
-```
 
 # Mortality
 
@@ -259,12 +280,9 @@ Do the mortality rates agree?
 
 ```{r}
 
+
 # View(zoomsstest$model$M_sb)
 # View(zoomizertest@params@mu_b)
 all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)
-
-which(zoomsstest$model$M_sb != zoomizertest@params@mu_b)
-
-# senescence mortality seems to differ at the maximum sizes - rounding error in sizes?
 
 ```

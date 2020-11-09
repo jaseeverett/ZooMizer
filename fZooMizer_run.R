@@ -1,5 +1,5 @@
 phyto_fixed <- function(params, n, n_pp, n_other, rates, dt, kappa=params@resource_params$kappa, lambda=params@resource_params$lambda, ... ) {
-  npp <- kappa*params@w_full^(-lambda) #returns the fixed spectrum at every time step
+  npp <- kappa*params@w_full^(1-lambda) / params@dw #returns the fixed spectrum at every time step
   npp[params@w_full > params@resource_params$w_pp_cutoff* (1 - 1e-06)] <- 0
   return(npp)
 }
@@ -103,14 +103,14 @@ setZooMizerConstants <- function(params, Groups, sst){
   M_sb <- temp_eff * M_sb # Incorporate temp effect on senscence mortality
   
   
-  params@initial_n_pp <- params@resource_params$kappa * params@w_full^(-params@resource_params$lambda)
+  params@initial_n_pp <- params@resource_params$kappa * params@w_full^(1-params@resource_params$lambda)/params@dw_full
   params@initial_n_pp[params@w_full > params@resource_params$w_pp_cutoff] <- 0
   
   
-  a_dynam <- (params@resource_params$kappa)*(params@w[1]^(2-params@resource_params$lambda)) # calculate coefficient for initial dynamic spectrum, so that N(w_phyto) equals N(w_dynam) at w[1]
+  a_dynam <- (params@resource_params$kappa)*(params@w[1]^(2-params@resource_params$lambda))#/params@dw[1] # calculate coefficient for initial dynamic spectrum, so that N(w_phyto) equals N(w_dynam) at w[1]
   
   # Initial abundances form a continuation of the plankton spectrum, with a slope of -1
-  tempN <- matrix(a_dynam*(params@w)^-2, nrow = nrow(params@species_params), ncol = length(params@w), byrow = TRUE)
+  tempN <- matrix(a_dynam*(params@w)^(-1)/params@dw, nrow = nrow(params@species_params), ncol = length(params@w), byrow = TRUE)
   props_z <- params@species_params$Prop[params@species_params$Type=="Zooplankton"] # Zooplankton proportions
   tempN[params@species_params$Type=="Zooplankton",] <- props_z * tempN[params@species_params$Type=="Zooplankton",] # Set abundances of diff zoo groups based on smallest size class proportions
   tempN[params@species_params$Type=="Fish",] <- (1/sum(params@species_params$Type=="Fish")) * tempN[params@species_params$Type=="Fish",] # Set abundandances of fish groups based on smallest size class proportions
