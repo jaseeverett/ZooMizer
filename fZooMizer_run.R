@@ -91,7 +91,7 @@ setZooMizerConstants <- function(params, Groups, sst){
       beta_mat <- matrix(params@species_params$PPMR[i], nrow = length(params@w), ncol = length(params@w_full))
       
       # Calculate feeding kernels
-      pred_kernel[i, , ] <- exp(-0.5*(log((beta_mat*prey_weight_matrix)/
+      pred_kernel[params@species_params$species[i], , ] <- exp(-0.5*(log((beta_mat*prey_weight_matrix)/
                                             pred_weight_matrix)/params@species_params$FeedWidth[i])^2)/
         sqrt(2*pi*params@species_params$FeedWidth[i]^2)
     }
@@ -287,15 +287,15 @@ new_PredRate <- function (params, n, n_pp, n_other, t, feeding_level, ...)
   if (length(params@ft_pred_kernel_p) == 1) {
     n_total_in_size_bins <- sweep(n, 2, params@dw, "*", 
                                   check.margin = FALSE)
-    pred_rate <- sweep(params@pred_kernel, c(1, 2), (1 - 
-                                                       feeding_level) * params@search_vol * n_total_in_size_bins * params@other_params$temp_eff, 
+    pred_rate <- sweep(params@pred_kernel, c(1, 2), 
+                       params@search_vol * n_total_in_size_bins * params@other_params$temp_eff, 
                        "*", check.margin = FALSE)
     pred_rate <- colSums(aperm(pred_rate, c(2, 1, 3)), dims = 1)
     return(pred_rate)
   }
   idx_sp <- (no_w_full - no_w + 1):no_w_full
   Q <- matrix(0, nrow = no_sp, ncol = no_w_full)
-  Q[, idx_sp] <- sweep((1 - feeding_level) * params@search_vol * params@other_params$temp_eff *
+  Q[, idx_sp] <- sweep(params@search_vol * params@other_params$temp_eff *
                          n, 2, params@dw, "*")
   pred_rate <- Re(t(mvfft(t(params@ft_pred_kernel_p) * mvfft(t(Q)), 
                           inverse = TRUE)))/no_w_full

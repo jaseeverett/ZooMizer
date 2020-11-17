@@ -151,7 +151,7 @@ setZooMizerConstants <- function(params, Groups, sst){
       beta_mat <- matrix(params@species_params$PPMR[i], nrow = length(params@w), ncol = length(params@w_full))
       
       # Calculate feeding kernels
-      pred_kernel[i, , ] <- exp(-0.5*(log((beta_mat*prey_weight_matrix)/
+      pred_kernel[params@species_params$species[i], , ] <- exp(-0.5*(log((beta_mat*prey_weight_matrix)/
                                             pred_weight_matrix)/params@species_params$FeedWidth[i])^2)/
         sqrt(2*pi*params@species_params$FeedWidth[i]^2)
     }
