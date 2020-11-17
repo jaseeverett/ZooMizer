@@ -1639,6 +1639,10 @@ summary {
 </div>
 
 
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Here we are trying to compare the original code ZooMSS model (version 2, Heneghan et al. 2020) with ZooMizer, an attempt at recreating it within the mizer package.</p>
+<p>We start by initialising and running the two models.</p>
 <pre class="r"><code>library(mizer)
 library(Rcpp)</code></pre>
 <pre><code>## Warning: package &#39;Rcpp&#39; was built under R version 3.6.3</code></pre>
@@ -1660,31 +1664,6 @@ zoomsstest &lt;- list()
 zoomsstest$model$model_runtime &lt;- system.time(
  zoomsstest &lt;- fZooMSS_Model(input_params, Groups, SaveTimeSteps)
 )</code></pre>
-<pre><code>## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used</code></pre>
-<pre><code>## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used
-
-## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used
-
-## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used
-
-## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used
-
-## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used
-
-## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used
-
-## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used
-
-## Warning in if (param$Groups$FeedType == &quot;FilterFeeder&quot;) {: the condition has
-## length &gt; 1 and only the first element will be used</code></pre>
 <pre><code>## 
   |                                                                            
   |======================================================================| 100%</code></pre>
@@ -1698,34 +1677,67 @@ groups &lt;- read.csv(&quot;data/TestGroups_mizer.csv&quot;)
 
 zoomizertest &lt;- fZooMizer_run(groups = groups, input = input_params)</code></pre>
 <pre><code>## Note: Using z0 = z0pre * w_inf ^ z0exp for missing z0 values.</code></pre>
+<pre><code>## Warning in kappa * params@w_full^(1 - lambda)/params@dw: longer object length is
+## not a multiple of shorter object length</code></pre>
 <p>Let’s try and look at some comparisons…</p>
+</div>
 <div id="initial-values" class="section level1">
 <h1>Initial values</h1>
-<p>We want to check that the initial setups were all the same:</p>
-<pre class="r"><code>#weight vectors
+<p>We want to check that the initial setups were all the same. the <code>all.equal</code> function tests the ‘near equality’ of two objects, that is, whether the objects are equal to within a tolerance (by default the tolerance is 1.5e-8). It’s appropriate to use that here to allow for small floating point errors introduced by unit conversions and converting back and forth between absolute and logged values.</p>
+<pre class="r"><code>#weight vectors (i.e. size classes)
 all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zoomsstest$model$param$w_phyto)],check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>#abundances - phyto
-all.equal(zoomsstest$model$nPP/zoomsstest$model$param$w_phyto ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)], check.attributes=FALSE)</code></pre>
+<pre class="r"><code>#abundances - phyto - dimensions time x weight
+all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)] * zoomizertest@params@dw_full[1:1:length(zoomsstest$model$nPP)], check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>#abundances - zoo and fish
-all.equal(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), zoomizertest@params@initial_n, check.attributes=FALSE)</code></pre>
+<pre class="r"><code>#abundances - zoo and fish. Note N is in dimensions time x weight x species
+all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomizertest@params@dw,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>#View(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE))
 #View(zoomizertest@params@initial_n)
 
 initialnsaved &lt;- readRDS(&quot;data/initialn.RDS&quot;)
-all.equal(zoomsstest$model$N[1,,] / zoomsstest$model$param$w, initialnsaved, check.attributes=FALSE)</code></pre>
+all.equal(zoomsstest$model$N[1,,] , initialnsaved * zoomizertest@params@dw, check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code># quick check here: abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] / zoomsstest$model$param$w, zoomizertest@n[2,,], check.attributes=FALSE)</code></pre>
-<pre><code>## [1] &quot;Mean relative difference: 0.9954925&quot;</code></pre>
+all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,] * zoomizertest@params@dw, check.attributes=FALSE)</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 251637119291&quot;</code></pre>
+<p>So we have that the size classes and initial abundance values (taking into account that ZooMSS is in absolute abundance and ZooMizer is in normalised abundance) are all in agreement. However, after a single time step they differ by a lot! Let’s look into what might be doing this.</p>
+<p>Recall the McKendrick-von Foerster equation</p>
+<p><span class="math display">\[ \frac{\partial}{\partial t} N_i(w,t) = - \frac{\partial}{\partial w} (g_i(w,t) N_i(w,t)) - \mu_i(w,t)N_i(w,t), \]</span> where <span class="math inline">\(g_i\)</span> is growth (which is due to feeding) and <span class="math inline">\(\mu_i\)</span> is mortality (due to senescence and predation).</p>
+<p>Let’s look at the first term on the right-hand side: growth.</p>
 </div>
-<div id="predation" class="section level1">
-<h1>Predation</h1>
-<p>Consider the search volumes:</p>
+<div id="growth-due-to-feeding" class="section level1">
+<h1>Growth due to feeding</h1>
+<p>Trying with the actual growth matrices. Both Mizer and ZooMSS use g/yr as the units.</p>
+<pre class="r"><code>param &lt;- zoomsstest$model$param
+model &lt;- zoomsstest$model
+
+    growth_multiplier &lt;- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
+    predation_multiplier &lt;- model$N[1,,] * model$temp_eff # n_species x n_sizes
+    #diffusion_multiplier &lt;- colSums(N * (assim_eff^2)) # 1 x n_sizes
+
+    ### DO GROWTH
+    dynam_growthkernel &lt;- model$dynam_growthkernel
+    dim(dynam_growthkernel) &lt;- c(model$param$ngrps*model$param$ngrid, model$param$ngrid)
+    cs &lt;- .colSums(growth_multiplier * t(dynam_growthkernel), m = model$param$ngrid, n = model$param$ngrps*model$param$ngrid)
+    dim(cs) &lt;- c(model$param$ngrps, model$param$ngrid)
+    gg &lt;- model$ingested_phyto + cs
+    
+zoomizererepro &lt;- getERepro(zoomizertest@params) #all 0 as expected
+zoomizerereprogrowth &lt;- getEReproAndGrowth(zoomizertest@params)
+zoomizeregrowth &lt;- getEGrowth(zoomizertest@params)
+all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(zoomizeregrowth, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer&#39;s N is in 1/g so perhaps this is the right conversion?</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 1.000353&quot;</code></pre>
+<p>Looking at the matrices, it’s clearly not right. Though it’s not completely clear whether the difference abundance units may be affecting this. Consider the function for growth:</p>
+<p><span class="math display">\[ g_i(w,t) = \tau \sum_{j} 2.5 C_j V_i(w)\int_{w_p}^{w} \phi_i (w,w&#39;)N_j(w&#39;,t)w&#39;dw&#39; \]</span></p>
+<p>The growth in ZooMSS is calculated from the search volume <span class="math inline">\(V_i(w)\)</span>, prey size selectivity function <span class="math inline">\(\phi_i(w,w&#39;)\)</span>, prey carbon content <span class="math inline">\(C_j\)</span> and temperature effect constant <span class="math inline">\(\tau\)</span>. Let’s look at these one at a time:</p>
+<div id="search-volume" class="section level2">
+<h2>Search volume</h2>
 <pre class="r"><code>#zoomss code
 SearchVol &lt;- matrix(NA, nrow = zoomsstest$model$param$ngrps, ncol = zoomsstest$model$param$ngrid)
 for(i in 1:zoomsstest$model$param$ngrps){
@@ -1738,11 +1750,8 @@ for(i in 1:zoomsstest$model$param$ngrps){
 
 all.equal(SearchVol, zoomizertest@params@search_vol, check.attributes=FALSE)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<p>How about predation kernels?</p>
-<pre class="r"><code>param &lt;- zoomsstest$model$param
-model &lt;- zoomsstest$model
-  
-  gg_log_t_phyto &lt;- ((param$w^-1) %*% t(param$w_phyto))/log(10) # Growth
+<p>These are in agreement. How about feeding kernels?</p>
+<pre class="r"><code>  gg_log_t_phyto &lt;- ((param$w^-1) %*% t(param$w_phyto))/log(10) # Growth
   diff_log_t_phyto &lt;- ((param$w^-2) %*% t(param$w_phyto^2))/log(10) # Diffusion
   diet_log_t_phyto &lt;- matrix(param$w_phyto, nrow = length(param$w), ncol = length(param$w_phyto), byrow = TRUE) # Diet/Ingestion
 
@@ -1771,29 +1780,15 @@ model &lt;- zoomsstest$model
   simp_dynam[c(seq(3, param$ngrid-1,2))] &lt;- 2
   sm_dynam &lt;- matrix(simp_dynam, nrow = param$ngrid, ncol = param$ngrid, byrow = TRUE) * (param$dx/3)
 
-  ## Temperature Effect Matrix
-  # Effect of temperature on feeding and predation rate
-  #temp_flag &lt;- 2.4^((environ$sst)/10)
-  #temp_cil &lt;- 2.8^((environ$sst)/10)
-  #temp_gel &lt;- 1.75^((environ$sst)/10)
-  #temp_larv &lt;- 2.2^((environ$sst)/10)
-  #temp_chaet &lt;- 2.44^((environ$sst)/10)
-  #temp_crust &lt;- 2.57^((environ$sst)/10)
-  #temp_ocop &lt;- 2.8^((environ$sst)/10)
-  #temp_ccop &lt;- 2.8^((environ$sst)/10)
-  #temp_fish &lt;- 2.6^((environ$sst)/10)
-
-  #temp_zoo &lt;- c(temp_flag, temp_cil, temp_larv, temp_ocop, temp_ccop, temp_crust, temp_chaet, temp_larv, temp_gel)
-  #temp_fish &lt;- rep(temp_fish, num_fish)
-
-  #temp_zoo &lt;- rep(exp(23.93 - 0.59/(8.62e-05*(273+environ$sst))), num_zoo) # exp(23.93 - 0.59/(8.62e-05*(273+environ$sst)))
-  #temp_fish &lt;- rep(exp(23.93 - 0.59/(8.62e-05*(273+environ$sst))), num_fish) # exp(25.55 - 0.63/(8.62e-05*(273+environ$sst)))/exp(23.93 - 0.59/(8.62e-05*(273+environ$sst)))
-
+  
   ### Q10 OF 2 FOR ALL ZOO AND FISH
   temp_zoo &lt;- rep(2.^((param$sst - 30)/10), param$num_zoo) # exp(23.93 - 0.59/(8.62e-05*(273+environ$sst)))
   temp_fish &lt;- rep(2.^((param$sst - 30)/10), param$num_fish)
   temp_eff &lt;- matrix(c(temp_zoo, temp_fish), nrow = param$ngrps, ncol = param$ngrid)
 
+  
+  phyto_predkernel &lt;- array(0, dim=c(param$ngrps,param$ngrid,param$ngridPP))
+  dynam_predkernel &lt;- array(0, dim=c(param$ngrps,param$ngrid,param$ngrid))
   #### CALCULATES CONSTANT BITS OF THE MODEL FUNCTIONS FOR EACH GROUP
   for(i in 1:param$ngrps){
     ## Senescence mortality
@@ -1823,10 +1818,10 @@ model &lt;- zoomsstest$model
       beta_mat_dynam &lt;- matrix(betas, nrow = param$ngrid, ncol = param$ngrid)
 
       # Calculate feeding kernels
-      sp_phyto_predkernel &lt;- exp(-0.5*(log((beta_mat_phyto*phyto_prey_weight_matrix)/
+      phyto_predkernel[i,,] &lt;- exp(-0.5*(log((beta_mat_phyto*phyto_prey_weight_matrix)/
                                             phyto_pred_weight_matrix)/param$Groups$FeedWidth[i])^2)/
         sqrt(2*pi*param$Groups$FeedWidth[i]^2)
-      sp_dynam_predkernel &lt;- exp(-0.5*(log((beta_mat_dynam*dynam_prey_weight_matrix)/
+      dynam_predkernel[i,,] &lt;- exp(-0.5*(log((beta_mat_dynam*dynam_prey_weight_matrix)/
                                             dynam_pred_weight_matrix)/param$Groups$FeedWidth[i])^2)/
         sqrt(2*pi*param$Groups$FeedWidth[i]^2)
 
@@ -1834,12 +1829,12 @@ model &lt;- zoomsstest$model
 
       # if (param$fixed_filterPPMR == TRUE){
         if(i == 3){
-          sp_phyto_predkernel &lt;- matrix(sp_phyto_predkernel[44,], nrow = param$ngrid, ncol = param$ngridPP, byrow = TRUE)
-          sp_dynam_predkernel &lt;- matrix(sp_dynam_predkernel[44,], nrow = param$ngrid, ncol = param$ngrid, byrow = TRUE)
+          phyto_predkernel[i,,] &lt;- matrix(phyto_predkernel[i,44,], nrow = param$ngrid, ncol = param$ngridPP, byrow = TRUE)
+          dynam_predkernel[i,,] &lt;- matrix(dynam_predkernel[i,44,], nrow = param$ngrid, ncol = param$ngrid, byrow = TRUE)
         }
         if(i == 8){
-          sp_phyto_predkernel &lt;- matrix(sp_phyto_predkernel[61,], nrow = param$ngrid, ncol = param$ngridPP, byrow = TRUE)
-          sp_dynam_predkernel &lt;- matrix(sp_dynam_predkernel[61,], nrow = param$ngrid, ncol = param$ngrid, byrow = TRUE)
+          phyto_predkernel[i,,] &lt;- matrix(phyto_predkernel[i,61,], nrow = param$ngrid, ncol = param$ngridPP, byrow = TRUE)
+          dynam_predkernel[i,,] &lt;- matrix(dynam_predkernel[i,61,], nrow = param$ngrid, ncol = param$ngrid, byrow = TRUE)
         }
       # }
 
@@ -1848,12 +1843,13 @@ model &lt;- zoomsstest$model
       beta_mat_dynam &lt;- matrix(param$Groups$PPMR[i], nrow = param$ngrid, ncol = param$ngrid)
 
       # Calculate feeding kernels
-      sp_phyto_predkernel &lt;- exp(-0.5*(log((beta_mat_phyto*phyto_prey_weight_matrix)/
+      phyto_predkernel[i,,] &lt;- exp(-0.5*(log((beta_mat_phyto*phyto_prey_weight_matrix)/
                                             phyto_pred_weight_matrix)/param$Groups$FeedWidth[i])^2)/
         sqrt(2*pi*param$Groups$FeedWidth[i]^2)
-      sp_dynam_predkernel &lt;- exp(-0.5*(log((beta_mat_dynam*dynam_prey_weight_matrix)/
+      dynam_predkernel[i,,] &lt;- exp(-0.5*(log((beta_mat_dynam*dynam_prey_weight_matrix)/
                                             dynam_pred_weight_matrix)/param$Groups$FeedWidth[i])^2)/
         sqrt(2*pi*param$Groups$FeedWidth[i]^2)
+      
     }
     
 }
@@ -1873,27 +1869,67 @@ model &lt;- zoomsstest$model
 <pre><code>## [1]  12 178  71</code></pre>
 <pre class="r"><code>all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2]) #sanity check</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>all.equal(zoomsstest$model$phyto_dietkernel[,,1]*zoomizertest@n_pp[1,1:178], zoomizerdiet[,,13], check.attributes=FALSE)</code></pre>
-<pre><code>## [1] &quot;Mean relative difference: 161.5431&quot;</code></pre>
-<p>Trying with the actual growth matrices. Mizer uses g/yr as its units. What are the units for ZooMSS?</p>
-<pre class="r"><code>    growth_multiplier &lt;- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
-    predation_multiplier &lt;- model$N[1,,] * model$temp_eff # n_species x n_sizes
-    #diffusion_multiplier &lt;- colSums(N * (assim_eff^2)) # 1 x n_sizes
-
-    ### DO GROWTH
-    dynam_growthkernel &lt;- model$dynam_growthkernel
-    dim(dynam_growthkernel) &lt;- c(model$param$ngrps*model$param$ngrid, model$param$ngrid)
-    cs &lt;- .colSums(growth_multiplier * t(dynam_growthkernel), m = model$param$ngrid, n = model$param$ngrps*model$param$ngrid)
-    dim(cs) &lt;- c(model$param$ngrps, model$param$ngrid)
-    gg &lt;- model$ingested_phyto + cs
-    
-zoomizererepro &lt;- getERepro(zoomizertest@params) #all 0 as expected
-zoomizerereprogrowth &lt;- getEReproAndGrowth(zoomizertest@params)
-zoomizeregrowth &lt;- getEGrowth(zoomizertest@params)
-all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro</code></pre>
+<pre class="r"><code>dim(phyto_predkernel)</code></pre>
+<pre><code>## [1]  12 178  71</code></pre>
+<pre class="r"><code>dim(zoomizerpredkernel)</code></pre>
+<pre><code>## [1]  12 178 216</code></pre>
+<pre class="r"><code>#comparing phytoplankton predation kernels
+all.equal(phyto_predkernel[,,], zoomizerpredkernel[,,1:71], check.attributes=FALSE) #TRUE  </code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>all.equal(zoomizeregrowth/zoomizertest@params@w, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer&#39;s N is in 1/g so perhaps this is the right conversion?</code></pre>
-<pre><code>## [1] &quot;Mean relative difference: 1&quot;</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[1,,], zoomizerpredkernel[1,,1:71], check.attributes=FALSE)   #TRUE  Flagellates </code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[2,,], zoomizerpredkernel[2,,1:71], check.attributes=FALSE)   #TRUE  Ciliates    </code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[3,,], zoomizerpredkernel[3,,1:71], check.attributes=FALSE)   #TRUE  Larvaceans  </code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[4,,], zoomizerpredkernel[4,,1:71], check.attributes=FALSE)   #TRUE  OmniCopepods</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[5,,], zoomizerpredkernel[5,,1:71], check.attributes=FALSE)   #TRUE  CarnCopepods</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[6,,], zoomizerpredkernel[6,,1:71], check.attributes=FALSE)   #TRUE  Euphausiids</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[7,,], zoomizerpredkernel[7,,1:71], check.attributes=FALSE)   #TRUE  Chaetognaths</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[8,,], zoomizerpredkernel[8,,1:71], check.attributes=FALSE)   #TRUE  Salps</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[9,,], zoomizerpredkernel[9,,1:71], check.attributes=FALSE)   #TRUE  Jellyfish</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[10,,], zoomizerpredkernel[10,,1:71], check.attributes=FALSE) #TRUE  Fish_Small</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[11,,], zoomizerpredkernel[11,,1:71], check.attributes=FALSE) #TRUE  Fish_Med</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(phyto_predkernel[12,,], zoomizerpredkernel[12,,1:71], check.attributes=FALSE) #TRUE  Fish_Large</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>#comparing zoo/fish predation kernels
+dim(dynam_predkernel)</code></pre>
+<pre><code>## [1]  12 178 178</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[,,], zoomizerpredkernel[,,39:216], check.attributes=FALSE)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[1,,], zoomizerpredkernel[1,,39:216], check.attributes=FALSE)   #TRUE  Flagellates </code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[2,,], zoomizerpredkernel[2,,39:216], check.attributes=FALSE)   #TRUE  Ciliates</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[3,,], zoomizerpredkernel[3,,39:216], check.attributes=FALSE)   #TRUE  Larvaceans  </code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[4,,], zoomizerpredkernel[4,,39:216], check.attributes=FALSE)   #TRUE  OmniCopepods</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[5,,], zoomizerpredkernel[5,,39:216], check.attributes=FALSE)   #TRUE  CarnCopepods</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[6,,], zoomizerpredkernel[6,,39:216], check.attributes=FALSE)   #TRUE  Euphausiids</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[7,,], zoomizerpredkernel[7,,39:216], check.attributes=FALSE)   #TRUE  Chaetognaths</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[8,,], zoomizerpredkernel[8,,39:216], check.attributes=FALSE)   #TRUE  Salps</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[9,,], zoomizerpredkernel[9,,39:216], check.attributes=FALSE)   #TRUE  Jellyfish</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[10,,], zoomizerpredkernel[10,,39:216], check.attributes=FALSE) #TRUE  Fish_Small</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[11,,], zoomizerpredkernel[11,,39:216], check.attributes=FALSE) #TRUE  Fish_Med</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attributes=FALSE) #TRUE  Fish_Large</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+</div>
 </div>
 <div id="mortality" class="section level1">
 <h1>Mortality</h1>
@@ -1901,24 +1937,7 @@ all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energ
 <pre class="r"><code># View(zoomsstest$model$M_sb)
 # View(zoomizertest@params@mu_b)
 all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)</code></pre>
-<pre><code>## [1] &quot;Mean relative difference: 0.1117337&quot;</code></pre>
-<pre class="r"><code>which(zoomsstest$model$M_sb != zoomizertest@params@mu_b)</code></pre>
-<pre><code>##   [1]  325  326  337  338  385  386  397  398  445  446  457  458  469  470  494
-##  [16]  506  530  628  640  652  663  664  675  676  687  688  699  700  711  712
-##  [31]  723  724  735  736  747  748  749  759  760  761  771  772  773  783  784
-##  [46]  785  795  796  797  807  808  809  819  820  821  831  832  833  843  844
-##  [61]  845  855  856  857  867  868  869  879  881  891  893  903  905  917  929
-##  [76]  941  943  953  955  965  967  989  991 1003 1015 1051 1063 1074 1075 1110
-##  [91] 1111 1122 1123 1134 1135 1158 1159 1170 1171 1182 1183 1194 1218 1220 1230
-## [106] 1232 1242 1244 1254 1256 1278 1280 1290 1292 1293 1294 1302 1304 1305 1306
-## [121] 1314 1316 1317 1318 1328 1329 1330 1340 1341 1342 1352 1353 1354 1364 1365
-## [136] 1366 1376 1377 1378 1388 1389 1390 1400 1401 1402 1412 1413 1414 1424 1425
-## [151] 1426 1436 1437 1438 1448 1449 1450 1461 1462 1473 1474 1485 1486 1497 1498
-## [166] 1509 1510 1521 1522 1533 1534 1535 1547 1559 1571 1583 1595 1607 1619 1631
-## [181] 1643 1655 1667 1679 1691 1703 1715 1727 1739 1751 1763 1775 1776 1788 1800
-## [196] 1812 1824 1836 1848 1860 1872 1884 1896 1908 1920 1932 1944 1968 1980 2004
-## [211] 2028 2040 2064 2088 2100 2124 2136</code></pre>
-<pre class="r"><code># senescence mortality seems to differ at the maximum sizes - rounding error in sizes?</code></pre>
+<pre><code>## [1] TRUE</code></pre>
 </div>
 
 

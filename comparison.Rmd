@@ -89,6 +89,10 @@ Let's look at the first term on the right-hand side: growth.
 Trying with the actual growth matrices. Both Mizer and ZooMSS use g/yr as the units.
 
 ```{r}
+
+param <- zoomsstest$model$param
+model <- zoomsstest$model
+
     growth_multiplier <- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
     predation_multiplier <- model$N[1,,] * model$temp_eff # n_species x n_sizes
     #diffusion_multiplier <- colSums(N * (assim_eff^2)) # 1 x n_sizes
@@ -135,8 +139,7 @@ all.equal(SearchVol, zoomizertest@params@search_vol, check.attributes=FALSE)
 These are in agreement. How about feeding kernels?
 
 ```{r}
-param <- zoomsstest$model$param
-model <- zoomsstest$model
+
   
   gg_log_t_phyto <- ((param$w^-1) %*% t(param$w_phyto))/log(10) # Growth
   diff_log_t_phyto <- ((param$w^-2) %*% t(param$w_phyto^2))/log(10) # Diffusion
@@ -257,34 +260,40 @@ all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietke
 dim(phyto_predkernel)
 dim(zoomizerpredkernel)
 
+
+
 #comparing phytoplankton predation kernels
+all.equal(phyto_predkernel[,,], zoomizerpredkernel[,,1:71], check.attributes=FALSE) #TRUE  
+
 all.equal(phyto_predkernel[1,,], zoomizerpredkernel[1,,1:71], check.attributes=FALSE)   #TRUE  Flagellates 
 all.equal(phyto_predkernel[2,,], zoomizerpredkernel[2,,1:71], check.attributes=FALSE)   #TRUE  Ciliates    
 all.equal(phyto_predkernel[3,,], zoomizerpredkernel[3,,1:71], check.attributes=FALSE)   #TRUE  Larvaceans  
 all.equal(phyto_predkernel[4,,], zoomizerpredkernel[4,,1:71], check.attributes=FALSE)   #TRUE  OmniCopepods
-all.equal(phyto_predkernel[5,,], zoomizerpredkernel[5,,1:71], check.attributes=FALSE)   #FALSE CarnCopepods
-all.equal(phyto_predkernel[6,,], zoomizerpredkernel[6,,1:71], check.attributes=FALSE)   #FALSE Euphausiids
-all.equal(phyto_predkernel[7,,], zoomizerpredkernel[7,,1:71], check.attributes=FALSE)   #FALSE Chaetognaths
+all.equal(phyto_predkernel[5,,], zoomizerpredkernel[5,,1:71], check.attributes=FALSE)   #TRUE  CarnCopepods
+all.equal(phyto_predkernel[6,,], zoomizerpredkernel[6,,1:71], check.attributes=FALSE)   #TRUE  Euphausiids
+all.equal(phyto_predkernel[7,,], zoomizerpredkernel[7,,1:71], check.attributes=FALSE)   #TRUE  Chaetognaths
 all.equal(phyto_predkernel[8,,], zoomizerpredkernel[8,,1:71], check.attributes=FALSE)   #TRUE  Salps
 all.equal(phyto_predkernel[9,,], zoomizerpredkernel[9,,1:71], check.attributes=FALSE)   #TRUE  Jellyfish
-all.equal(phyto_predkernel[10,,], zoomizerpredkernel[10,,1:71], check.attributes=FALSE) #FALSE Fish_Small
-all.equal(phyto_predkernel[11,,], zoomizerpredkernel[11,,1:71], check.attributes=FALSE) #FALSE Fish_Med
-all.equal(phyto_predkernel[12,,], zoomizerpredkernel[12,,1:71], check.attributes=FALSE) #FALSE Fish_Large
+all.equal(phyto_predkernel[10,,], zoomizerpredkernel[10,,1:71], check.attributes=FALSE) #TRUE  Fish_Small
+all.equal(phyto_predkernel[11,,], zoomizerpredkernel[11,,1:71], check.attributes=FALSE) #TRUE  Fish_Med
+all.equal(phyto_predkernel[12,,], zoomizerpredkernel[12,,1:71], check.attributes=FALSE) #TRUE  Fish_Large
 
 #comparing zoo/fish predation kernels
 dim(dynam_predkernel)
+all.equal(dynam_predkernel[,,], zoomizerpredkernel[,,39:216], check.attributes=FALSE)
+
 all.equal(dynam_predkernel[1,,], zoomizerpredkernel[1,,39:216], check.attributes=FALSE)   #TRUE  Flagellates 
 all.equal(dynam_predkernel[2,,], zoomizerpredkernel[2,,39:216], check.attributes=FALSE)   #TRUE  Ciliates
 all.equal(dynam_predkernel[3,,], zoomizerpredkernel[3,,39:216], check.attributes=FALSE)   #TRUE  Larvaceans  
 all.equal(dynam_predkernel[4,,], zoomizerpredkernel[4,,39:216], check.attributes=FALSE)   #TRUE  OmniCopepods
 all.equal(dynam_predkernel[5,,], zoomizerpredkernel[5,,39:216], check.attributes=FALSE)   #TRUE  CarnCopepods
-all.equal(dynam_predkernel[6,,], zoomizerpredkernel[6,,39:216], check.attributes=FALSE)   #FALSE Euphausiids
-all.equal(dynam_predkernel[7,,], zoomizerpredkernel[7,,39:216], check.attributes=FALSE)   #FALSE Chaetognaths
+all.equal(dynam_predkernel[6,,], zoomizerpredkernel[6,,39:216], check.attributes=FALSE)   #TRUE  Euphausiids
+all.equal(dynam_predkernel[7,,], zoomizerpredkernel[7,,39:216], check.attributes=FALSE)   #TRUE  Chaetognaths
 all.equal(dynam_predkernel[8,,], zoomizerpredkernel[8,,39:216], check.attributes=FALSE)   #TRUE  Salps
 all.equal(dynam_predkernel[9,,], zoomizerpredkernel[9,,39:216], check.attributes=FALSE)   #TRUE  Jellyfish
-all.equal(dynam_predkernel[10,,], zoomizerpredkernel[10,,39:216], check.attributes=FALSE) #FALSE Fish_Small
-all.equal(dynam_predkernel[11,,], zoomizerpredkernel[11,,39:216], check.attributes=FALSE) #FALSE Fish_Med
-all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attributes=FALSE) #FALSE Fish_Large
+all.equal(dynam_predkernel[10,,], zoomizerpredkernel[10,,39:216], check.attributes=FALSE) #TRUE  Fish_Small
+all.equal(dynam_predkernel[11,,], zoomizerpredkernel[11,,39:216], check.attributes=FALSE) #TRUE  Fish_Med
+all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attributes=FALSE) #TRUE  Fish_Large
   
 ```
 
