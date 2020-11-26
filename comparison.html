@@ -1684,26 +1684,31 @@ zoomizertest &lt;- fZooMizer_run(groups = groups, input = input_params)</code></
 <div id="initial-values" class="section level1">
 <h1>Initial values</h1>
 <p>We want to check that the initial setups were all the same. the <code>all.equal</code> function tests the ‘near equality’ of two objects, that is, whether the objects are equal to within a tolerance (by default the tolerance is 1.5e-8). It’s appropriate to use that here to allow for small floating point errors introduced by unit conversions and converting back and forth between absolute and logged values.</p>
-<pre class="r"><code>#weight vectors (i.e. size classes)
-all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)</code></pre>
-<pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zoomsstest$model$param$w_phyto)],check.attributes=FALSE)</code></pre>
-<pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>#abundances - phyto - dimensions time x weight
-all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)] * zoomizertest@params@dw_full[1:1:length(zoomsstest$model$nPP)], check.attributes=FALSE)</code></pre>
-<pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>#abundances - zoo and fish. Note N is in dimensions time x weight x species
-all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomizertest@params@dw,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), check.attributes=FALSE)</code></pre>
-<pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>#View(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE))
+<pre class="r"><code>
+#weight vectors (i.e. size classes)
+all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)
+## [1] TRUE
+
+all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zoomsstest$model$param$w_phyto)],check.attributes=FALSE)
+## [1] TRUE
+
+#abundances - phyto - dimensions time x weight
+all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)] * zoomizertest@params@dw_full[1:1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
+## [1] TRUE
+
+#abundances - zoo and fish. Note N is in dimensions time x weight x species
+all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomizertest@params@dw,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), check.attributes=FALSE)
+## [1] TRUE
+#View(zoomsstest$model$N[1,,] / matrix(zoomsstest$model$param$w,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE))
 #View(zoomizertest@params@initial_n)
 
 initialnsaved &lt;- readRDS(&quot;data/initialn.RDS&quot;)
-all.equal(zoomsstest$model$N[1,,] , initialnsaved * zoomizertest@params@dw, check.attributes=FALSE)</code></pre>
-<pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code># quick check here: abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,] * zoomizertest@params@dw, check.attributes=FALSE)</code></pre>
-<pre><code>## [1] &quot;Mean relative difference: 251637119291&quot;</code></pre>
+all.equal(zoomsstest$model$N[1,,] , initialnsaved * zoomizertest@params@dw, check.attributes=FALSE)
+## [1] TRUE
+
+# quick check here: abundances after a time step?
+all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,] * zoomizertest@params@dw, check.attributes=FALSE)
+## [1] &quot;Mean relative difference: 251637119291&quot;</code></pre>
 <p>So we have that the size classes and initial abundance values (taking into account that ZooMSS is in absolute abundance and ZooMizer is in normalised abundance) are all in agreement. However, after a single time step they differ by a lot! Let’s look into what might be doing this.</p>
 <p>Recall the McKendrick-von Foerster equation</p>
 <p><span class="math display">\[ \frac{\partial}{\partial t} N_i(w,t) = - \frac{\partial}{\partial w} (g_i(w,t) N_i(w,t)) - \mu_i(w,t)N_i(w,t), \]</span> where <span class="math inline">\(g_i\)</span> is growth (which is due to feeding) and <span class="math inline">\(\mu_i\)</span> is mortality (due to senescence and predation).</p>
