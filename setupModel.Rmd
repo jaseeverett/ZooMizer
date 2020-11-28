@@ -334,6 +334,8 @@ Still missing is the differential prey nutrition based on prey carbon content. W
 
 ```{r}
 
+temp_eff <-  matrix(2.^((enviro_row$sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
+
 #set up matrix of pred nutrition given prey, dims (pred species) x (prey species)
 assim_eff = matrix(mf.params@species_params$GrossGEscale * mf.params@species_params$Carbon, nrow = nrow(mf.params@species_params), ncol = nrow(mf.params@species_params))
 #get_filterfeeders <- which(mf.params@species_params$FeedType == "FilterFeeder")
@@ -380,7 +382,7 @@ new_Encounter <- function(params, n, n_pp, n_other, t, ...) {
             rowSums(sweep(
             params@pred_kernel, 3, params@dw_full * params@w_full * n_pp,
             "*", check.margin = FALSE), dims = 2)
-        encounter <- params@search_vol * (phi_prey_species + phi_prey_background)
+        encounter <- temp_eff * params@search_vol * (phi_prey_species + phi_prey_background)
     
     dimnames(encounter) <- dimnames(params@metab)
     
@@ -407,7 +409,6 @@ Looking good, but we still need to include the temperature effects on the other 
 
 ```{r}
 
-temp_eff <-  matrix(2.^((enviro_row$sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
 
 new_PredRate <- function (params, n, n_pp, n_other, t, feeding_level, ...) 
 {
@@ -435,7 +436,7 @@ new_PredRate <- function (params, n, n_pp, n_other, t, feeding_level, ...)
 new_EReproAndGrowth <- function (params, n, n_pp, n_other, t, encounter, feeding_level, 
     ...) 
 {
-    sweep((1 - feeding_level) * encounter * temp_eff, 1, params@species_params$alpha, 
+    sweep((1 - feeding_level) * encounter , 1, params@species_params$alpha, 
         "*", check.margin = FALSE) - params@metab
 }
 
