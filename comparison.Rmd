@@ -157,6 +157,17 @@ These are in agreement. How about feeding kernels?
   ## Search Volume storage
   SearchVol <- matrix(NA, nrow = param$ngrps, ncol = param$ngrid) # Search volume
 
+  # Simpson's Rule matrices for growth, diffusion and mortality integrals
+  simp_phyto <- array(1, dim = param$ngridPP)
+  simp_phyto[c(seq(2, param$ngridPP-1,2))] <- 4
+  simp_phyto[c(seq(3, param$ngridPP-1,2))] <- 2
+  sm_phyto <- matrix(simp_phyto, nrow = param$ngrid, ncol = param$ngridPP, byrow = TRUE) * (param$dx/3)
+
+  simp_dynam <- array(1, dim = param$ngrid)
+  simp_dynam[c(seq(2, param$ngrid-1,2))] <- 4
+  simp_dynam[c(seq(3, param$ngrid-1,2))] <- 2
+  sm_dynam <- matrix(simp_dynam, nrow = param$ngrid, ncol = param$ngrid, byrow = TRUE) * (param$dx/3)
+  
    ### Q10 OF 2 FOR ALL ZOO AND FISH
   temp_zoo <- rep(2.^((param$sst - 30)/10), param$num_zoo) # exp(23.93 - 0.59/(8.62e-05*(273+environ$sst)))
   temp_fish <- rep(2.^((param$sst - 30)/10), param$num_fish)
@@ -284,6 +295,7 @@ all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attribut
 ```
 
 It looks like the difference may be in the different methods being used: ZooMSS does its numerical integration over log(weight) unlike Mizer, which does it over absolute weight. The conversion for this is given by arrays `dynam_growthkernel` and `phyto_growthkernel` and related helper arrays `gg_log_t_dynam` etc. These are what I will look at next...
+
 
 
 # Mortality
