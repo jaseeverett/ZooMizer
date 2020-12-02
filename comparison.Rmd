@@ -70,7 +70,7 @@ all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomize
 
 initialnsaved <- readRDS("data/initialn.RDS")
 all.equal(zoomsstest$model$N[1,,] , initialnsaved * zoomizertest@params@dw, check.attributes=FALSE)
-
+all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n * zoomizertest@params@dw, check.attributes=FALSE)
 # quick check here: abundances after a time step?
 all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,] * zoomizertest@params@dw, check.attributes=FALSE)
 ```
@@ -323,7 +323,7 @@ idx.iter <- 2:ngrid
     diffusion_multiplier <- colSums(model$N[1,,] * (model$assim_eff^2)) # 1 x n_sizes
 
     ### DO GROWTH
-    sw <- sweep(model$dynam_growthkernel, 3, model$growth_multiplier, '*') # n_species x n_sizes x n_sizes
+    sw <- sweep(model$dynam_growthkernel, 3, growth_multiplier, '*') # n_species x n_sizes x n_sizes
     ap <- aperm(sw, c(3,1,2)) # n_sizes x n_species x n_sizes
     cs <- colSums(ap) # n_species x n_sizes
     gg <- model$ingested_phyto + cs
@@ -365,6 +365,8 @@ Now, the equivalent in Mizer:
 params <- zoomizertest@params
 
 dt=1
+
+n <- params@initial_n
 
 no_sp <- nrow(params@species_params) # number of species
   no_w <- length(params@w) # number of fish size bins
