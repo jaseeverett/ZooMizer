@@ -296,7 +296,110 @@ all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attribut
 
 It looks like the difference may be in the different methods being used: ZooMSS does its numerical integration over log(weight) unlike Mizer, which does it over absolute weight. The conversion for this is given by arrays `dynam_growthkernel` and `phyto_growthkernel` and related helper arrays `gg_log_t_dynam` etc. These are what I will look at next...
 
+Here's the setup in ZooMSS:
 
+```{r}
+
+ngrps <- model$param$ngrps
+  ngrid <- model$param$ngrid
+
+idx.iter <- 2:ngrid
+  idx <- 2:(param$ngrid-1)
+  
+  A.iter <- matrix(0, nrow = ngrps, ncol = ngrid)
+  C.iter <- matrix(0, nrow = ngrps, ncol = ngrid)
+  S.iter <- matrix(0, nrow = ngrps, ncol = ngrid)
+
+  A <- matrix(0, nrow = ngrps, ncol = ngrid)
+  B <- matrix(0, nrow = ngrps, ncol = ngrid)
+  C <- matrix(0, nrow = ngrps, ncol = ngrid)
+  S <- matrix(0, nrow = ngrps, ncol = ngrid) # Previous abundance
+
+  # Temporary Matrices that get updated each time step some of these saved for output
+  N <- matrix(model$N[1,,], nrow = ngrps, ncol = ngrid) 
+
+    growth_multiplier <- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
+    predation_multiplier <- model$N[1,,] * model$temp_eff # n_species x n_sizes
+    diffusion_multiplier <- colSums(model$N[1,,] * (model$assim_eff^2)) # 1 x n_sizes
+
+    ### DO GROWTH
+    sw <- sweep(model$dynam_growthkernel, 3, model$growth_multiplier, '*') # n_species x n_sizes x n_sizes
+    ap <- aperm(sw, c(3,1,2)) # n_sizes x n_species x n_sizes
+    cs <- colSums(ap) # n_species x n_sizes
+    gg <- model$ingested_phyto + cs
+    rm(sw, ap, cs)
+
+    ### DO MORTALITY
+    sw2 <- sweep(model$dynam_mortkernel, c(2,3), predation_multiplier, '*') # n_sizes x n_species x n_sizes
+    ap2 <- aperm(sw2, c(2,3,1))
+    M2 <- .colSums(colSums(ap2),param$ngrid,param$ngrid) # 1 x n_sizes
+    Z <- sweep(model$M_sb + model$fish_mort, 2, M2, '+') # Total dynamic spectrum mortality (n_species x n_sizes)
+    rm(sw2, ap2)
+
+    ### DO DIFFUSION
+    sw3 <- sweep(model$dynam_diffkernel, 3, diffusion_multiplier, '*')
+    ap3 <- aperm(sw3, c(3,1,2))
+    cs3 <- colSums(ap3)
+    diff <-  cs3 *0
+    rm(sw3, ap3, cs3)
+
+    ### MvF WITH DIFFUSION ALGORITHM
+    # Numerical implementation matrices (for MvF without diffusion)
+    A.iter[,idx.iter] <- param$dt / param$dx * gg[,idx.iter-1] # Growth stuff
+    C.iter[,idx.iter] <- 1 + param$dt * Z[,idx.iter] + param$dt/param$dx * gg[,idx.iter] # Mortality
+    S.iter[,idx.iter] <- N[,idx.iter] # N at.....
+    N.iter <- N # Current Abundance
+
+    # Numerical implementation matrices (for MvF WITH diffusion)
+    A[,idx] <- param$dt/param$dx * (gg[,idx-1] + diff[,idx-1] * (log(10)/2+1/(2*param$dx))) # Growth stuff
+    B[,idx] <- diff[,idx+1] * param$dt/(2*param$dx^2) # Diffusion term
+    C[,idx] <- 1 + param$dt * Z[,idx] + param$dt/param$dx*(gg[,idx] + diff[,idx] * (log(10)/2+1/param$dx)) # Mortality
+    S[,idx] <- N[,idx]
+
+```
+
+Now, the equivalent in Mizer:
+
+```{r}
+
+params <- zoomizertest@params
+
+dt=1
+
+no_sp <- nrow(params@species_params) # number of species
+  no_w <- length(params@w) # number of fish size bins
+  idx <- 2:no_w
+  w_max_idx <- params@w_min_idx
+  for (i in 1:length(w_max_idx)) {
+    w_max_idx[i] <- which(round(log10(params@w),2)==round(log10(params@species_params$w_inf[i]),2))
+  }
+
+  # Hacky shortcut to access the correct element of a 2D array using 1D notation
+  # This references the egg size bracket for all species, so for example
+  # n[w_min_idx_array_ref] = n[,w_min_idx]
+  w_min_idx_array_ref <- (params@w_min_idx - 1) * no_sp + (1:no_sp)
+  # Matrices for solver
+  a <- matrix(0, nrow = no_sp, ncol = no_w)
+  b <- matrix(0, nrow = no_sp, ncol = no_w)
+  S <- matrix(0, nrow = no_sp, ncol = no_w)
+
+  encounter <- getEncounter(params)
+  
+  
+  e_growth <- new_EReproAndGrowth(params = params, n = params@initial_n, n_pp = params@initial_n_pp, n_other = params@initial_n_other, t = 1, encounter = getEncounter(params), feeding_level = getFeedingLevel(params))
+  mort <- getMort(params)
+    n_pp <- params@initial_n_pp
+    # Iterate species one time step forward:
+    # a_{ij} = - g_i(w_{j-1}) / dw_j dt
+    a[, idx] <- sweep(e_growth[, idx - 1, drop = FALSE] * dt, 2,
+                      params@dw[idx], "/")
+    # b_{ij} = 1 + g_i(w_j) / dw_j dt + \mu_i(w_j) dt
+    b[] <- 1 + sweep(e_growth * dt, 2, params@dw, "/") + mort * dt
+    # S_{ij} <- N_i(w_j)
+    S[,idx] <- n[, idx, drop = FALSE]
+```
+
+If you look at the relevant comparisons (`a` against `A` and `b` against `C`), it's apparent that the Mizer values are around an order of magnitude too high. This might mean that something has been counted twice in the ZooMizer code? 
 
 # Mortality
 
@@ -305,8 +408,12 @@ Do the mortality rates agree?
 ```{r}
 
 
+#senescence alone:
 # View(zoomsstest$model$M_sb)
 # View(zoomizertest@params@mu_b)
-all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)
+all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes = FALSE) # TRUE
+
+#overall mortality
+all.equal(Z, mort, check.attributes = FALSE)
 
 ```
