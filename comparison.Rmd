@@ -42,6 +42,9 @@ zoomsstest <- readRDS("zoomssoutputdt1.rds")
 input_params$tmaxx <- input_params$tmax
 
 source("fZooMizer_run.R")
+environment(new_project_simple) <- asNamespace('mizer')
+assignInNamespace("project_simple", new_project_simple, ns = "mizer")
+
 groups <- read.csv("data/TestGroups_mizer.csv")
 
 zoomizertest <- fZooMizer_run(groups = groups, input = input_params)
@@ -398,9 +401,11 @@ no_sp <- nrow(params@species_params) # number of species
     b[] <- 1 + sweep(e_growth * dt, 2, params@dw, "/") + mort * dt
     # S_{ij} <- N_i(w_j)
     S[,idx] <- n[, idx, drop = FALSE]
+    
+
 ```
 
-If you look at the relevant comparisons (`a` against `A` and `b` against `C`), it's apparent that the Mizer values are around an order of magnitude too high. This might mean that something has been counted twice in the ZooMizer code? 
+If you look at the relevant comparisons (`a` against `A` and `b` against `C`), it's apparent that the Mizer values are around an order of magnitude too high. This might mean that something has been counted twice in the ZooMizer code?
 
 # Mortality
 
