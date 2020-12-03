@@ -1644,9 +1644,9 @@ summary {
 <p>Here we are trying to compare the original code ZooMSS model (version 2, Heneghan et al. 2020) with ZooMizer, an attempt at recreating it within the mizer package.</p>
 <p>We start by initialising and running the two models.</p>
 <pre class="r"><code>library(mizer)
-library(Rcpp)</code></pre>
-<pre><code>## Warning: package &#39;Rcpp&#39; was built under R version 3.6.3</code></pre>
-<pre class="r"><code>source(&quot;fZooMSS_Model.R&quot;) #source the model code
+library(Rcpp)
+
+source(&quot;fZooMSS_Model.R&quot;) #source the model code
 source(&quot;fZooMSS_Setup.R&quot;)
 source(&quot;fZooMSS_CalculatePhytoParam.R&quot;)
 #setwd(&quot;~/GitHub/ZooMizer/&quot;)
@@ -1677,8 +1677,6 @@ groups &lt;- read.csv(&quot;data/TestGroups_mizer.csv&quot;)
 
 zoomizertest &lt;- fZooMizer_run(groups = groups, input = input_params)</code></pre>
 <pre><code>## Note: Using z0 = z0pre * w_inf ^ z0exp for missing z0 values.</code></pre>
-<pre><code>## Warning in kappa * params@w_full^(1 - lambda)/params@dw: longer object length is
-## not a multiple of shorter object length</code></pre>
 <p>Let’s try and look at some comparisons…</p>
 </div>
 <div id="initial-values" class="section level1">
@@ -1703,12 +1701,11 @@ all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomize
 #View(zoomizertest@params@initial_n)
 
 initialnsaved &lt;- readRDS(&quot;data/initialn.RDS&quot;)
-all.equal(zoomsstest$model$N[1,,] , initialnsaved * zoomizertest@params@dw, check.attributes=FALSE)
+all.equal(zoomsstest$model$N[1,,] , sweep(zoomizertest@params@initial_n, 2, zoomizertest@params@dw, &quot;*&quot;), check.attributes=FALSE)
 ## [1] TRUE
-
 # quick check here: abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,] * zoomizertest@params@dw, check.attributes=FALSE)
-## [1] &quot;Mean relative difference: 251637119291&quot;</code></pre>
+all.equal(zoomsstest$model$N[2,,] , sweep(zoomizertest@n[2,,],2, zoomizertest@params@dw, &quot;*&quot;), check.attributes=FALSE)
+## [1] &quot;Mean relative difference: 0.9995271&quot;</code></pre>
 <p>So we have that the size classes and initial abundance values (taking into account that ZooMSS is in absolute abundance and ZooMizer is in normalised abundance) are all in agreement. However, after a single time step they differ by a lot! Let’s look into what might be doing this.</p>
 <p>Recall the McKendrick-von Foerster equation</p>
 <p><span class="math display">\[ \frac{\partial}{\partial t} N_i(w,t) = - \frac{\partial}{\partial w} (g_i(w,t) N_i(w,t)) - \mu_i(w,t)N_i(w,t), \]</span> where <span class="math inline">\(g_i\)</span> is growth (which is due to feeding) and <span class="math inline">\(\mu_i\)</span> is mortality (due to senescence and predation).</p>
@@ -1736,7 +1733,7 @@ zoomizerereprogrowth &lt;- getEReproAndGrowth(zoomizertest@params)
 zoomizeregrowth &lt;- getEGrowth(zoomizertest@params)
 all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>all.equal(zoomizeregrowth, gg, check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer&#39;s N is in 1/g so perhaps this is the right conversion?</code></pre>
+<pre class="r"><code>all.equal(zoomizeregrowth[,2:178], gg[,1:177], check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer&#39;s N is in 1/g so perhaps this is the right conversion?</code></pre>
 <pre><code>## [1] &quot;Mean relative difference: 1.000353&quot;</code></pre>
 <p>Looking at the matrices, it’s clearly not right. Though it’s not completely clear whether the difference abundance units may be affecting this. Consider the function for growth:</p>
 <p><span class="math display">\[ g_i(w,t) = \tau \sum_{j} 2.5 C_j V_i(w)\int_{w_p}^{w} \phi_i (w,w&#39;)N_j(w&#39;,t)w&#39;dw&#39; \]</span></p>
@@ -1757,12 +1754,10 @@ all.equal(SearchVol, zoomizertest@params@search_vol, check.attributes=FALSE)</co
 <pre><code>## [1] TRUE</code></pre>
 <p>These are in agreement. How about feeding kernels?</p>
 <pre class="r"><code>  gg_log_t_phyto &lt;- ((param$w^-1) %*% t(param$w_phyto))/log(10) # Growth
-  diff_log_t_phyto &lt;- ((param$w^-2) %*% t(param$w_phyto^2))/log(10) # Diffusion
   diet_log_t_phyto &lt;- matrix(param$w_phyto, nrow = length(param$w), ncol = length(param$w_phyto), byrow = TRUE) # Diet/Ingestion
 
   # Predators are rows, dynam prey weights are columns
   gg_log_t_dynam &lt;- ((param$w^-1) %*% t(param$w))/log(10) # Growth
-  diff_log_t_dynam &lt;- ((param$w^-2) %*% t(param$w^2))/log(10) # Diffusion
   diet_log_t_dynam &lt;- matrix(param$w, nrow = length(param$w), ncol = length(param$w), byrow = TRUE) # Diet/ingestion
 
   ### PREDATION KERNELS FOR PHYTOPLANKTON SPECTRUM AND DYNAMIC SPECTRUM
@@ -1784,9 +1779,8 @@ all.equal(SearchVol, zoomizertest@params@search_vol, check.attributes=FALSE)</co
   simp_dynam[c(seq(2, param$ngrid-1,2))] &lt;- 4
   simp_dynam[c(seq(3, param$ngrid-1,2))] &lt;- 2
   sm_dynam &lt;- matrix(simp_dynam, nrow = param$ngrid, ncol = param$ngrid, byrow = TRUE) * (param$dx/3)
-
   
-  ### Q10 OF 2 FOR ALL ZOO AND FISH
+   ### Q10 OF 2 FOR ALL ZOO AND FISH
   temp_zoo &lt;- rep(2.^((param$sst - 30)/10), param$num_zoo) # exp(23.93 - 0.59/(8.62e-05*(273+environ$sst)))
   temp_fish &lt;- rep(2.^((param$sst - 30)/10), param$num_fish)
   temp_eff &lt;- matrix(c(temp_zoo, temp_fish), nrow = param$ngrps, ncol = param$ngrid)
@@ -1934,15 +1928,115 @@ dim(dynam_predkernel)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attributes=FALSE) #TRUE  Fish_Large</code></pre>
 <pre><code>## [1] TRUE</code></pre>
+<p>It looks like the difference may be in the different methods being used: ZooMSS does its numerical integration over log(weight) unlike Mizer, which does it over absolute weight. The conversion for this is given by arrays <code>dynam_growthkernel</code> and <code>phyto_growthkernel</code> and related helper arrays <code>gg_log_t_dynam</code> etc. These are what I will look at next…</p>
+<p>Here’s the setup in ZooMSS:</p>
+<pre class="r"><code>ngrps &lt;- model$param$ngrps
+  ngrid &lt;- model$param$ngrid
+
+idx.iter &lt;- 2:ngrid
+  idx &lt;- 2:(param$ngrid-1)
+  
+  A.iter &lt;- matrix(0, nrow = ngrps, ncol = ngrid)
+  C.iter &lt;- matrix(0, nrow = ngrps, ncol = ngrid)
+  S.iter &lt;- matrix(0, nrow = ngrps, ncol = ngrid)
+
+  A &lt;- matrix(0, nrow = ngrps, ncol = ngrid)
+  B &lt;- matrix(0, nrow = ngrps, ncol = ngrid)
+  C &lt;- matrix(0, nrow = ngrps, ncol = ngrid)
+  S &lt;- matrix(0, nrow = ngrps, ncol = ngrid) # Previous abundance
+
+  # Temporary Matrices that get updated each time step some of these saved for output
+  N &lt;- matrix(model$N[1,,], nrow = ngrps, ncol = ngrid) 
+
+    growth_multiplier &lt;- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
+    predation_multiplier &lt;- model$N[1,,] * model$temp_eff # n_species x n_sizes
+    diffusion_multiplier &lt;- colSums(model$N[1,,] * (model$assim_eff^2)) # 1 x n_sizes
+
+    ### DO GROWTH
+    sw &lt;- sweep(model$dynam_growthkernel, 3, growth_multiplier, &#39;*&#39;) # n_species x n_sizes x n_sizes
+    ap &lt;- aperm(sw, c(3,1,2)) # n_sizes x n_species x n_sizes
+    cs &lt;- colSums(ap) # n_species x n_sizes
+    gg &lt;- model$ingested_phyto + cs
+    rm(sw, ap, cs)
+
+    ### DO MORTALITY
+    sw2 &lt;- sweep(model$dynam_mortkernel, c(2,3), predation_multiplier, &#39;*&#39;) # n_sizes x n_species x n_sizes
+    ap2 &lt;- aperm(sw2, c(2,3,1))
+    M2 &lt;- .colSums(colSums(ap2),param$ngrid,param$ngrid) # 1 x n_sizes
+    Z &lt;- sweep(model$M_sb + model$fish_mort, 2, M2, &#39;+&#39;) # Total dynamic spectrum mortality (n_species x n_sizes)
+    rm(sw2, ap2)
+
+    ### DO DIFFUSION
+    sw3 &lt;- sweep(model$dynam_diffkernel, 3, diffusion_multiplier, &#39;*&#39;)
+    ap3 &lt;- aperm(sw3, c(3,1,2))
+    cs3 &lt;- colSums(ap3)
+    diff &lt;-  cs3 *0
+    rm(sw3, ap3, cs3)
+
+    ### MvF WITH DIFFUSION ALGORITHM
+    # Numerical implementation matrices (for MvF without diffusion)
+    A.iter[,idx.iter] &lt;- param$dt / param$dx * gg[,idx.iter-1] # Growth stuff
+    C.iter[,idx.iter] &lt;- 1 + param$dt * Z[,idx.iter] + param$dt/param$dx * gg[,idx.iter] # Mortality
+    S.iter[,idx.iter] &lt;- N[,idx.iter] # N at.....
+    N.iter &lt;- N # Current Abundance
+
+    # Numerical implementation matrices (for MvF WITH diffusion)
+    A[,idx] &lt;- param$dt/param$dx * (gg[,idx-1] + diff[,idx-1] * (log(10)/2+1/(2*param$dx))) # Growth stuff
+    B[,idx] &lt;- diff[,idx+1] * param$dt/(2*param$dx^2) # Diffusion term
+    C[,idx] &lt;- 1 + param$dt * Z[,idx] + param$dt/param$dx*(gg[,idx] + diff[,idx] * (log(10)/2+1/param$dx)) # Mortality
+    S[,idx] &lt;- N[,idx]</code></pre>
+<p>Now, the equivalent in Mizer:</p>
+<pre class="r"><code>params &lt;- zoomizertest@params
+
+dt=1
+
+n &lt;- params@initial_n
+
+no_sp &lt;- nrow(params@species_params) # number of species
+  no_w &lt;- length(params@w) # number of fish size bins
+  idx &lt;- 2:no_w
+  w_max_idx &lt;- params@w_min_idx
+  for (i in 1:length(w_max_idx)) {
+    w_max_idx[i] &lt;- which(round(log10(params@w),2)==round(log10(params@species_params$w_inf[i]),2))
+  }
+
+  # Hacky shortcut to access the correct element of a 2D array using 1D notation
+  # This references the egg size bracket for all species, so for example
+  # n[w_min_idx_array_ref] = n[,w_min_idx]
+  w_min_idx_array_ref &lt;- (params@w_min_idx - 1) * no_sp + (1:no_sp)
+  # Matrices for solver
+  a &lt;- matrix(0, nrow = no_sp, ncol = no_w)
+  b &lt;- matrix(0, nrow = no_sp, ncol = no_w)
+  S &lt;- matrix(0, nrow = no_sp, ncol = no_w)
+
+  encounter &lt;- getEncounter(params)
+  
+  
+  e_growth &lt;- new_EReproAndGrowth(params = params, n = params@initial_n, n_pp = params@initial_n_pp, n_other = params@initial_n_other, t = 1, encounter = getEncounter(params), feeding_level = getFeedingLevel(params))
+  mort &lt;- getMort(params)
+    n_pp &lt;- params@initial_n_pp
+    # Iterate species one time step forward:
+    # a_{ij} = - g_i(w_{j-1}) / dw_j dt
+    a[, idx] &lt;- sweep(e_growth[, idx - 1, drop = FALSE] * dt, 2,
+                      params@dw[idx], &quot;/&quot;)
+    # b_{ij} = 1 + g_i(w_j) / dw_j dt + \mu_i(w_j) dt
+    b[] &lt;- 1 + sweep(e_growth * dt, 2, params@dw, &quot;/&quot;) + mort * dt
+    # S_{ij} &lt;- N_i(w_j)
+    S[,idx] &lt;- n[, idx, drop = FALSE]</code></pre>
+<p>If you look at the relevant comparisons (<code>a</code> against <code>A</code> and <code>b</code> against <code>C</code>), it’s apparent that the Mizer values are around an order of magnitude too high. This might mean that something has been counted twice in the ZooMizer code?</p>
 </div>
 </div>
 <div id="mortality" class="section level1">
 <h1>Mortality</h1>
 <p>Do the mortality rates agree?</p>
-<pre class="r"><code># View(zoomsstest$model$M_sb)
+<pre class="r"><code>#senescence alone:
+# View(zoomsstest$model$M_sb)
 # View(zoomizertest@params@mu_b)
-all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes=FALSE)</code></pre>
+all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes = FALSE) # TRUE</code></pre>
 <pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>#overall mortality
+all.equal(Z, mort, check.attributes = FALSE)</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 28.63575&quot;</code></pre>
 </div>
 
 
