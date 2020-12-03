@@ -69,10 +69,9 @@ all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomize
 #View(zoomizertest@params@initial_n)
 
 initialnsaved <- readRDS("data/initialn.RDS")
-all.equal(zoomsstest$model$N[1,,] , initialnsaved * zoomizertest@params@dw, check.attributes=FALSE)
-all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n * zoomizertest@params@dw, check.attributes=FALSE)
+all.equal(zoomsstest$model$N[1,,] , sweep(zoomizertest@params@initial_n, 2, zoomizertest@params@dw, "*"), check.attributes=FALSE)
 # quick check here: abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] , zoomizertest@n[2,,] * zoomizertest@params@dw, check.attributes=FALSE)
+all.equal(zoomsstest$model$N[2,,] , sweep(zoomizertest@n[2,,],2, zoomizertest@params@dw, "*"), check.attributes=FALSE)
 ```
 
 So we have that the size classes and initial abundance values (taking into account that ZooMSS is in absolute abundance and ZooMizer is in normalised abundance) are all in agreement. However, after a single time step they differ by a lot! Let's look into what might be doing this.
