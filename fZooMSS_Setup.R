@@ -165,8 +165,8 @@ fZooMSS_Setup <- function(param){
 
     ### Search volume
     SearchVol[i,] <- (param$Groups$SearchCoef[i])*(param$w^(param$Groups$SearchExp[i]))
-    SearchVol[i, 10^(param$Groups$Wmax[i]) < param$w] <- 0
-    SearchVol[i, 10^(param$Groups$W0[i]) > param$w] <- 0
+    SearchVol[i, 10^(param$Groups$Wmax[i]) < param$w * (1 + 1e-06)] <- 0
+    SearchVol[i, 10^(param$Groups$W0[i]) > param$w * (1 - 1e-06)] <- 0
 
     ### Predation Kernels
     if(param$Groups$Type[i] == "Zooplankton"){ # If group has an m-value (zooplankton)
