@@ -390,7 +390,7 @@ no_sp <- nrow(params@species_params) # number of species
   encounter <- getEncounter(params)
   
   
-  e_growth <- new_EReproAndGrowth(params = params, n = params@initial_n, n_pp = params@initial_n_pp, n_other = params@initial_n_other, t = 1, encounter = getEncounter(params), feeding_level = getFeedingLevel(params))
+  e_growth <- new_EReproAndGrowth(params = params, n = params@initial_n, n_pp = params@initial_n_pp, n_other = params@initial_n_other, t = 0, encounter = getEncounter(params), feeding_level = getFeedingLevel(params))
   mort <- getMort(params)
     n_pp <- params@initial_n_pp
     # Iterate species one time step forward:
