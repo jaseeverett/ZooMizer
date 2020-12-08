@@ -321,10 +321,11 @@ idx.iter <- 2:ngrid
 
   # Temporary Matrices that get updated each time step some of these saved for output
   N <- matrix(model$N[1,,], nrow = ngrps, ncol = ngrid) 
-
-    growth_multiplier <- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
-    predation_multiplier <- model$N[1,,] * model$temp_eff # n_species x n_sizes
-    diffusion_multiplier <- colSums(model$N[1,,] * (model$assim_eff^2)) # 1 x n_sizes
+  # N <- matrix(zoomizertest@n[1,,], nrow = ngrps, ncol = ngrid) 
+  
+    growth_multiplier <- colSums(N * model$assim_eff) # 1 x n_sizes
+    predation_multiplier <- N * model$temp_eff # n_species x n_sizes
+    diffusion_multiplier <- colSums(N * (model$assim_eff^2)) # 1 x n_sizes
 
     ### DO GROWTH
     sw <- sweep(model$dynam_growthkernel, 3, growth_multiplier, '*') # n_species x n_sizes x n_sizes
