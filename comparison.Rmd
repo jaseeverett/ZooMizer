@@ -332,14 +332,14 @@ idx.iter <- 2:ngrid
     ap <- aperm(sw, c(3,1,2)) # n_sizes x n_species x n_sizes
     cs <- colSums(ap) # n_species x n_sizes
     gg <- model$ingested_phyto + cs
-    rm(sw, ap, cs)
+    #rm(sw, ap, cs)
 
     ### DO MORTALITY
     sw2 <- sweep(model$dynam_mortkernel, c(2,3), predation_multiplier, '*') # n_sizes x n_species x n_sizes
     ap2 <- aperm(sw2, c(2,3,1))
     M2 <- .colSums(colSums(ap2),param$ngrid,param$ngrid) # 1 x n_sizes
     Z <- sweep(model$M_sb + model$fish_mort, 2, M2, '+') # Total dynamic spectrum mortality (n_species x n_sizes)
-    rm(sw2, ap2)
+    #rm(sw2, ap2)
 
     ### DO DIFFUSION
     sw3 <- sweep(model$dynam_diffkernel, 3, diffusion_multiplier, '*')
@@ -413,6 +413,35 @@ all.equal(C.iter, b, check.attributes = FALSE)
 ```
 
 If you look at the relevant comparisons (`a` against `A` and `b` against `C`), it's apparent that the Mizer values are around an order of magnitude too high. This might mean that something has been counted twice in the ZooMizer code?
+
+Note that `gg` in ZooMSS is mostly made up of the ingested phyto for small organisms. What is ingested phyto for ZooMizer?
+
+```{r}
+
+#ZooMSS
+
+
+#Zoomizer
+phi_prey_background <- params@other_params$assim_phyto * params@species_params$interaction_resource *
+    rowSums(sweep(
+      params@pred_kernel, 3, params@dw_full * params@w_full * n_pp,
+      "*", check.margin = FALSE), dims = 2)
+phyto_encounter <- params@other_params$temp_eff * params@search_vol * (phi_prey_background)
+
+#plug zoomss into zoomizer
+zoomssparams <- params
+zoomssparams@initial_n_pp[1:71] <- zoomsstest$model$nPP / params@dw_full[1:71]
+zoomssparams@initial_n[] <- sweep(zoomsstest$model$N[1,,], 2, params@dw, "/")
+#new_Encounter(params = zoomssparams, n = zoomssparams@initial_n, n_pp = zoomssparams@initial_n_pp, n_other = zoomssparams@initial_n_other, t=0)
+
+e_growth2 <- new_EReproAndGrowth(params = zoomssparams, n = zoomssparams@initial_n, n_pp = zoomssparams@initial_n_pp, n_other = zoomssparams@initial_n_other, t = 0, encounter = getEncounter(zoomssparams), feeding_level = getFeedingLevel(zoomssparams))
+
+all.equal(e_growth2, e_growth)
+
+
+
+```
+
 
 # Mortality
 
