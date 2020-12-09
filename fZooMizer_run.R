@@ -286,8 +286,8 @@ new_PredRate <- function(params, n, n_pp, n_other, t, feeding_level, ...)
   if (length(params@ft_pred_kernel_p) == 1) {
     n_total_in_size_bins <- sweep(n, 2, params@dw, "*",
                                   check.margin = FALSE)
-    pred_rate <- sweep(params@pred_kernel, c(1, 2),
-                       params@search_vol * n_total_in_size_bins,
+    pred_rate <- sweep(params@pred_kernel, c(1, 2), (1 - 
+                       feeding_level) * params@search_vol * n_total_in_size_bins,
                        "*", check.margin = FALSE)
     pred_rate <- colSums(aperm(pred_rate, c(2, 1, 3)), dims = 1)
     return(pred_rate)
@@ -297,6 +297,7 @@ new_PredRate <- function(params, n, n_pp, n_other, t, feeding_level, ...)
   Q[, idx_sp] <- sweep(params@search_vol * n, 2, params@dw, "*")
   pred_rate <- Re(t(mvfft(t(params@ft_pred_kernel_p) * mvfft(t(Q)),
                           inverse = TRUE)))/no_w_full
+  pred_rate[pred_rate < 1e-18] <- 0
   return(pred_rate * params@ft_mask)
 }
 
@@ -307,7 +308,7 @@ new_EReproAndGrowth <- function(params, n, n_pp, n_other, t, encounter, feeding_
 
 newFeedingLevel <- function (params, n, n_pp, n_other, t, encounter, ...)
 {
-  return(encounter * 0)
+  return(encounter * 0) #zero feeding level corresponds to type 1 feeding
 }
 
 fZooMizer_run <- function(groups, input){
@@ -357,7 +358,7 @@ fZooMizer_run <- function(groups, input){
 
   #mf.params <- setParams(mf.params)
 
-  mf.params <- setRateFunction(mf.params, "PredRate", "new_PredRate")
+ # mf.params <- setRateFunction(mf.params, "PredRate", "new_PredRate")
   mf.params <- setRateFunction(mf.params, "EReproAndGrowth", "new_EReproAndGrowth")
   mf.params <- setRateFunction(mf.params, "FeedingLevel", "newFeedingLevel")
   mf.params <- setRateFunction(mf.params, "Encounter", "new_Encounter")
