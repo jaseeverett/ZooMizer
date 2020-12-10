@@ -298,6 +298,9 @@ all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attribut
   
 ```
 
+
+## Growth integrals
+
 It looks like the difference may be in the different methods being used: ZooMSS does its numerical integration over log(weight) unlike Mizer, which does it over absolute weight. The conversion for this is given by arrays `dynam_growthkernel` and `phyto_growthkernel` and related helper arrays `gg_log_t_dynam` etc. These are what I will look at next...
 
 Here's the setup in ZooMSS:
