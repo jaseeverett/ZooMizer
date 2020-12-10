@@ -1644,9 +1644,9 @@ summary {
 <p>Here we are trying to compare the original code ZooMSS model (version 2, Heneghan et al. 2020) with ZooMizer, an attempt at recreating it within the mizer package.</p>
 <p>We start by initialising and running the two models.</p>
 <pre class="r"><code>library(mizer)
-library(Rcpp)
-
-source(&quot;fZooMSS_Model.R&quot;) #source the model code
+library(Rcpp)</code></pre>
+<pre><code>## Warning: package &#39;Rcpp&#39; was built under R version 3.6.3</code></pre>
+<pre class="r"><code>source(&quot;fZooMSS_Model.R&quot;) #source the model code
 source(&quot;fZooMSS_Setup.R&quot;)
 source(&quot;fZooMSS_CalculatePhytoParam.R&quot;)
 #setwd(&quot;~/GitHub/ZooMizer/&quot;)
@@ -1673,6 +1673,9 @@ zoomsstest &lt;- readRDS(&quot;zoomssoutputdt1.rds&quot;)
 input_params$tmaxx &lt;- input_params$tmax
 
 source(&quot;fZooMizer_run.R&quot;)
+environment(new_project_simple) &lt;- asNamespace(&#39;mizer&#39;)
+assignInNamespace(&quot;project_simple&quot;, new_project_simple, ns = &quot;mizer&quot;)
+
 groups &lt;- read.csv(&quot;data/TestGroups_mizer.csv&quot;)
 
 zoomizertest &lt;- fZooMizer_run(groups = groups, input = input_params)</code></pre>
@@ -1691,7 +1694,7 @@ all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zo
 ## [1] TRUE
 
 #abundances - phyto - dimensions time x weight
-all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)] * zoomizertest@params@dw_full[1:1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
+all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)] * zoomizertest@params@dw_full[1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
 ## [1] TRUE
 
 #abundances - zoo and fish. Note N is in dimensions time x weight x species
@@ -1705,7 +1708,7 @@ all.equal(zoomsstest$model$N[1,,] , sweep(zoomizertest@params@initial_n, 2, zoom
 ## [1] TRUE
 # quick check here: abundances after a time step?
 all.equal(zoomsstest$model$N[2,,] , sweep(zoomizertest@n[2,,],2, zoomizertest@params@dw, &quot;*&quot;), check.attributes=FALSE)
-## [1] &quot;Mean relative difference: 0.9995271&quot;</code></pre>
+## [1] &quot;Mean relative difference: 0.1389219&quot;</code></pre>
 <p>So we have that the size classes and initial abundance values (taking into account that ZooMSS is in absolute abundance and ZooMizer is in normalised abundance) are all in agreement. However, after a single time step they differ by a lot! Let’s look into what might be doing this.</p>
 <p>Recall the McKendrick-von Foerster equation</p>
 <p><span class="math display">\[ \frac{\partial}{\partial t} N_i(w,t) = - \frac{\partial}{\partial w} (g_i(w,t) N_i(w,t)) - \mu_i(w,t)N_i(w,t), \]</span> where <span class="math inline">\(g_i\)</span> is growth (which is due to feeding) and <span class="math inline">\(\mu_i\)</span> is mortality (due to senescence and predation).</p>
@@ -1734,7 +1737,7 @@ zoomizeregrowth &lt;- getEGrowth(zoomizertest@params)
 all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>all.equal(zoomizeregrowth[,2:178], gg[,1:177], check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer&#39;s N is in 1/g so perhaps this is the right conversion?</code></pre>
-<pre><code>## [1] &quot;Mean relative difference: 1.000353&quot;</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 1.000334&quot;</code></pre>
 <p>Looking at the matrices, it’s clearly not right. Though it’s not completely clear whether the difference abundance units may be affecting this. Consider the function for growth:</p>
 <p><span class="math display">\[ g_i(w,t) = \tau \sum_{j} 2.5 C_j V_i(w)\int_{w_p}^{w} \phi_i (w,w&#39;)N_j(w&#39;,t)w&#39;dw&#39; \]</span></p>
 <p>The growth in ZooMSS is calculated from the search volume <span class="math inline">\(V_i(w)\)</span>, prey size selectivity function <span class="math inline">\(\phi_i(w,w&#39;)\)</span>, prey carbon content <span class="math inline">\(C_j\)</span> and temperature effect constant <span class="math inline">\(\tau\)</span>. Let’s look at these one at a time:</p>
@@ -1747,6 +1750,8 @@ for(i in 1:zoomsstest$model$param$ngrps){
     SearchVol[i,] &lt;- (zoomsstest$model$param$Groups$SearchCoef[i])*(zoomsstest$model$param$w^(zoomsstest$model$param$Groups$SearchExp[i]))
     SearchVol[i, 10^(zoomsstest$model$param$Groups$Wmax[i]) &lt; zoomsstest$model$param$w * (1 + 1e-06)] &lt;- 0
     SearchVol[i, 10^(zoomsstest$model$param$Groups$W0[i]) &gt; zoomsstest$model$param$w * (1 - 1e-06)] &lt;- 0
+    
+    
 }
 
 
@@ -1947,24 +1952,25 @@ idx.iter &lt;- 2:ngrid
 
   # Temporary Matrices that get updated each time step some of these saved for output
   N &lt;- matrix(model$N[1,,], nrow = ngrps, ncol = ngrid) 
-
-    growth_multiplier &lt;- colSums(model$N[1,,] * model$assim_eff) # 1 x n_sizes
-    predation_multiplier &lt;- model$N[1,,] * model$temp_eff # n_species x n_sizes
-    diffusion_multiplier &lt;- colSums(model$N[1,,] * (model$assim_eff^2)) # 1 x n_sizes
+  # N &lt;- matrix(zoomizertest@n[1,,], nrow = ngrps, ncol = ngrid) 
+  
+    growth_multiplier &lt;- colSums(N * model$assim_eff) # 1 x n_sizes
+    predation_multiplier &lt;- N * model$temp_eff # n_species x n_sizes
+    diffusion_multiplier &lt;- colSums(N * (model$assim_eff^2)) # 1 x n_sizes
 
     ### DO GROWTH
     sw &lt;- sweep(model$dynam_growthkernel, 3, growth_multiplier, &#39;*&#39;) # n_species x n_sizes x n_sizes
     ap &lt;- aperm(sw, c(3,1,2)) # n_sizes x n_species x n_sizes
     cs &lt;- colSums(ap) # n_species x n_sizes
     gg &lt;- model$ingested_phyto + cs
-    rm(sw, ap, cs)
+    #rm(sw, ap, cs)
 
     ### DO MORTALITY
     sw2 &lt;- sweep(model$dynam_mortkernel, c(2,3), predation_multiplier, &#39;*&#39;) # n_sizes x n_species x n_sizes
     ap2 &lt;- aperm(sw2, c(2,3,1))
     M2 &lt;- .colSums(colSums(ap2),param$ngrid,param$ngrid) # 1 x n_sizes
     Z &lt;- sweep(model$M_sb + model$fish_mort, 2, M2, &#39;+&#39;) # Total dynamic spectrum mortality (n_species x n_sizes)
-    rm(sw2, ap2)
+    #rm(sw2, ap2)
 
     ### DO DIFFUSION
     sw3 &lt;- sweep(model$dynam_diffkernel, 3, diffusion_multiplier, &#39;*&#39;)
@@ -1985,10 +1991,10 @@ idx.iter &lt;- 2:ngrid
     B[,idx] &lt;- diff[,idx+1] * param$dt/(2*param$dx^2) # Diffusion term
     C[,idx] &lt;- 1 + param$dt * Z[,idx] + param$dt/param$dx*(gg[,idx] + diff[,idx] * (log(10)/2+1/param$dx)) # Mortality
     S[,idx] &lt;- N[,idx]</code></pre>
-<p>Now, the equivalent in Mizer:</p>
+<p>Now, the equivalent in ZooMizer:</p>
 <pre class="r"><code>params &lt;- zoomizertest@params
 
-dt=1
+dt &lt;- 1
 
 n &lt;- params@initial_n
 
@@ -2012,7 +2018,7 @@ no_sp &lt;- nrow(params@species_params) # number of species
   encounter &lt;- getEncounter(params)
   
   
-  e_growth &lt;- new_EReproAndGrowth(params = params, n = params@initial_n, n_pp = params@initial_n_pp, n_other = params@initial_n_other, t = 1, encounter = getEncounter(params), feeding_level = getFeedingLevel(params))
+  e_growth &lt;- new_EReproAndGrowth(params = params, n = params@initial_n, n_pp = params@initial_n_pp, n_other = params@initial_n_other, t = 0, encounter = getEncounter(params), feeding_level = getFeedingLevel(params))
   mort &lt;- getMort(params)
     n_pp &lt;- params@initial_n_pp
     # Iterate species one time step forward:
@@ -2022,8 +2028,37 @@ no_sp &lt;- nrow(params@species_params) # number of species
     # b_{ij} = 1 + g_i(w_j) / dw_j dt + \mu_i(w_j) dt
     b[] &lt;- 1 + sweep(e_growth * dt, 2, params@dw, &quot;/&quot;) + mort * dt
     # S_{ij} &lt;- N_i(w_j)
-    S[,idx] &lt;- n[, idx, drop = FALSE]</code></pre>
+    S[,idx] &lt;- n[, idx, drop = FALSE]
+
+    
+all.equal(e_growth, gg, check.attributes = FALSE)</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 1.000335&quot;</code></pre>
+<pre class="r"><code>all.equal(A.iter, a, check.attributes = FALSE)</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 6.015069&quot;</code></pre>
+<pre class="r"><code>all.equal(C.iter, b, check.attributes = FALSE)</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 15.82911&quot;</code></pre>
 <p>If you look at the relevant comparisons (<code>a</code> against <code>A</code> and <code>b</code> against <code>C</code>), it’s apparent that the Mizer values are around an order of magnitude too high. This might mean that something has been counted twice in the ZooMizer code?</p>
+<p>Note that <code>gg</code> in ZooMSS is mostly made up of the ingested phyto for small organisms. What is ingested phyto for ZooMizer?</p>
+<pre class="r"><code>#ZooMSS
+
+
+#Zoomizer
+phi_prey_background &lt;- params@other_params$assim_phyto * params@species_params$interaction_resource *
+    rowSums(sweep(
+      params@pred_kernel, 3, params@dw_full * params@w_full * n_pp,
+      &quot;*&quot;, check.margin = FALSE), dims = 2)
+phyto_encounter &lt;- params@other_params$temp_eff * params@search_vol * (phi_prey_background)
+
+#plug zoomss into zoomizer
+zoomssparams &lt;- params
+zoomssparams@initial_n_pp[1:71] &lt;- zoomsstest$model$nPP / params@dw_full[1:71]
+zoomssparams@initial_n[] &lt;- sweep(zoomsstest$model$N[1,,], 2, params@dw, &quot;/&quot;)
+#new_Encounter(params = zoomssparams, n = zoomssparams@initial_n, n_pp = zoomssparams@initial_n_pp, n_other = zoomssparams@initial_n_other, t=0)
+
+e_growth2 &lt;- new_EReproAndGrowth(params = zoomssparams, n = zoomssparams@initial_n, n_pp = zoomssparams@initial_n_pp, n_other = zoomssparams@initial_n_other, t = 0, encounter = getEncounter(zoomssparams), feeding_level = getFeedingLevel(zoomssparams))
+
+all.equal(e_growth2, e_growth)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
 </div>
 </div>
 <div id="mortality" class="section level1">
@@ -2034,9 +2069,12 @@ no_sp &lt;- nrow(params@species_params) # number of species
 # View(zoomizertest@params@mu_b)
 all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes = FALSE) # TRUE</code></pre>
 <pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>#predation mortality
+all.equal(M2, getPredMort(zoomizertest@params)[1,], check.attributes = FALSE) </code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 30.63925&quot;</code></pre>
 <pre class="r"><code>#overall mortality
 all.equal(Z, mort, check.attributes = FALSE)</code></pre>
-<pre><code>## [1] &quot;Mean relative difference: 28.63575&quot;</code></pre>
+<pre><code>## [1] &quot;Mean relative difference: 29.56405&quot;</code></pre>
 </div>
 
 
