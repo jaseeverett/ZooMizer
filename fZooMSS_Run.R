@@ -115,20 +115,19 @@ fZooMSS_Run <- function(model){
     N_iter[1,1] <- N[1,1] # This forces R to make a copy of the variable. Otherwise N is linked to N_iter in the Rcpp code and they change together.
 
     # Numerical implementation matrices (for MvF WITH diffusion)
-    A[,idx] <- dt/dx * (gg[,idx-1] + diff[,idx-1] * (log(10)/2+1/(2*dx))) # Growth stuff
-    B[,idx] <- diff[,idx+1] * dt/(2*dx^2) # Diffusion term
-    C[,idx] <- 1 + dt * Z[,idx] + dt/dx*(gg[,idx] + diff[,idx] * (log(10)/2+1/dx)) # Mortality
-    S[,idx] <- N[,idx]
+    # A[,idx] <- dt/dx * (gg[,idx-1] + diff[,idx-1] * (log(10)/2+1/(2*dx))) # Growth stuff
+    # B[,idx] <- diff[,idx+1] * dt/(2*dx^2) # Diffusion term
+    # C[,idx] <- 1 + dt * Z[,idx] + dt/dx*(gg[,idx] + diff[,idx] * (log(10)/2+1/dx)) # Mortality
+    # S[,idx] <- N[,idx]
 
     # The original Base R code for the MvF equation
-    N <- fZooMSS_MvF_BaseR(ngrps, curr_min_size, curr_max_size,
-                            A_iter, C_iter, N_iter, S_iter,
-                            A, B, C, N, S)
+    #N <- fZooMSS_MvF_BaseR(ngrps, curr_min_size, curr_max_size,
+    #                        A_iter, C_iter, N_iter, S_iter,
+    #                        A, B, C, N, S)
 
-    # N <- fZooMSS_MvF_Rcpp(cngrps=ngrps, cN_iter=N_iter,
-    #                        cA_iter=A_iter, cC_iter=C_iter, cS_iter=S_iter,
-    #                        cN=N, cA=A, cB=B, cC=C, cS=S,
-    #                        ccurr_min_size=curr_min_size, ccurr_max_size=curr_max_size)
+     N <- fZooMSS_MvF_Rcpp(cngrps=ngrps, cN_iter=N_iter,
+                            cA_iter=A_iter, cC_iter=C_iter, cS_iter=S_iter,
+                            ccurr_min_size=curr_min_size, ccurr_max_size=curr_max_size)
 
 
     #### Keep smallest fish community size class as equal to equivalent zooplankton size class

@@ -21,6 +21,7 @@ library(Rcpp)
 source("fZooMSS_Model.R") #source the model code
 source("fZooMSS_Setup.R")
 source("fZooMSS_CalculatePhytoParam.R")
+Rcpp::sourceCpp("fZooMSS_MvF_Rcpp.cpp") #explicitly using same numerics as mizer
 #setwd("~/GitHub/ZooMizer/")
 ## Build environmental data
 enviro <- readRDS("data/enviro_test20.RDS")
