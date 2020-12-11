@@ -26,6 +26,7 @@ source("fZooMSS_CalculatePhytoParam.R")
 enviro <- readRDS("data/enviro_test20.RDS")
 enviro_data <- fZooMSS_CalculatePhytoParam(enviro) # Calculate Phytoplankton Parameters
 Groups <- read.csv("TestGroups.csv")
+#Groups$Carbon <- 1
 
 input_params <- enviro_data[15,]
 input_params$dt <- 1
@@ -46,6 +47,7 @@ environment(new_project_simple) <- asNamespace('mizer')
 assignInNamespace("project_simple", new_project_simple, ns = "mizer")
 
 groups <- read.csv("data/TestGroups_mizer.csv")
+#groups$Carbon <- 1
 
 zoomizertest <- fZooMizer_run(groups = groups, input = input_params)
 ```
@@ -75,6 +77,8 @@ initialnsaved <- readRDS("data/initialn.RDS")
 all.equal(zoomsstest$model$N[1,,] , sweep(zoomizertest@params@initial_n, 2, zoomizertest@params@dw, "*"), check.attributes=FALSE)
 # quick check here: abundances after a time step?
 all.equal(zoomsstest$model$N[2,,] , sweep(zoomizertest@n[2,,],2, zoomizertest@params@dw, "*"), check.attributes=FALSE)
+
+
 ```
 
 So we have that the size classes and initial abundance values (taking into account that ZooMSS is in absolute abundance and ZooMizer is in normalised abundance) are all in agreement. However, after a single time step they differ by a lot! Let's look into what might be doing this.
@@ -109,6 +113,8 @@ model <- zoomsstest$model
 zoomizererepro <- getERepro(zoomizertest@params) #all 0 as expected
 zoomizerereprogrowth <- getEReproAndGrowth(zoomizertest@params)
 zoomizeregrowth <- getEGrowth(zoomizertest@params)
+
+
 all.equal(zoomizeregrowth, zoomizerereprogrowth) #should be equal since no energy goes to repro
 
 all.equal(zoomizeregrowth[,2:178], gg[,1:177], check.attributes=FALSE) #it was really close earlier with zoomizeregrowth/w, now mizer's N is in 1/g so perhaps this is the right conversion?
@@ -118,7 +124,26 @@ Looking at the matrices, it's clearly not right. Though it's not completely clea
 
 $$ g_i(w,t) = \tau \sum_{j} 2.5 C_j V_i(w)\int_{w_p}^{w} \phi_i (w,w')N_j(w',t)w'dw' $$
 
-The growth in ZooMSS is calculated from the search volume $V_i(w)$, prey size selectivity function $\phi_i(w,w')$, prey carbon content $C_j$ and temperature effect constant $\tau$. Let's look at these one at a time:
+The growth in ZooMSS is calculated from temperature effect constant $\tau$, prey carbon content $C_j$, the search volume $V_i(w)$, and prey size selectivity function $\phi_i(w,w')$. Let's look at these one at a time:
+
+## Temperature effect
+
+```{r}
+
+all.equal(zoomsstest$model$temp_eff, zoomizertest@params@other_params$temp_eff)
+
+```
+
+## Prey carbon / assimilation efficiency
+
+Note that in ZooMSS, the assimilation efficiency is a (prey species) $\times$ (prey size) matrix, while it's a (predator species) $\times$ (prey species) matrix in Mizer. This is simply fixed for each prey species though, so we can compare the ZooMSS value with the transpose of the ZooMizer value.
+
+```{r}
+
+all.equal(zoomsstest$model$assim_eff[,1:12], t(zoomizertest@params@other_params$assim_eff))
+
+```
+
 
 ## Search volume
 
@@ -480,3 +505,4 @@ all.equal(M2, getPredMort(zoomizertest@params)[1,], check.attributes = FALSE)
 all.equal(Z, mort, check.attributes = FALSE)
 
 ```
+
