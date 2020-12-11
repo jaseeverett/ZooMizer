@@ -134,7 +134,7 @@ assim_eff = matrix(groups$GrossGEscale * groups$Carbon, nrow = nrow(groups), nco
 #for (i in get_filterfeeders) {
 #  assim_eff[,i] <- assim_eff[,i] / groups$Carbon[i]
 #}
-return(assim_eff)
+return(t(assim_eff))
 }
 
 new_project_simple <- function(params, n, n_pp, n_other, t, dt, steps,
