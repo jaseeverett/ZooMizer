@@ -62,12 +62,17 @@ We want to check that the initial setups were all the same. the `all.equal` func
 ```{r collapse=TRUE}
 
 #weight vectors (i.e. size classes)
+length(zoomsstest$model$param$w_phyto)
+sum(zoomizertest@n_pp[1,] > 0) #cuts off at 71 (correct)
+
 all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)
 
 all.equal(zoomsstest$model$param$w_phyto, zoomizertest@params@w_full[1:length(zoomsstest$model$param$w_phyto)],check.attributes=FALSE)
 
 #abundances - phyto - dimensions time x weight
-all.equal(zoomsstest$model$nPP ,zoomizertest@n_pp[1,1:length(zoomsstest$model$nPP)] * zoomizertest@params@dw_full[1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
+all.equal(zoomsstest$model$nPP,
+          zoomizertest@n_pp[1,1:length(zoomsstest$model$param$w_phyto)] *
+            zoomizertest@params@dw_full[1:length(zoomsstest$model$nPP)], check.attributes=FALSE)
 
 #abundances - zoo and fish. Note N is in dimensions time x weight x species
 all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomizertest@params@dw,nrow=zoomsstest$model$param$ngrps, ncol = length(zoomsstest$model$param$w), byrow=TRUE), check.attributes=FALSE)
@@ -287,10 +292,11 @@ all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietke
 dim(phyto_predkernel)
 dim(zoomizerpredkernel)
 
-
+#sanity check: zoomss phyto and dynamic spectrum feeding kernels all equal:
+all.equal(phyto_predkernel[,,39:71],dynam_predkernel[,,1:(71-39+1)])
 
 #comparing phytoplankton predation kernels
-all.equal(phyto_predkernel[,,], zoomizerpredkernel[,,1:71], check.attributes=FALSE) #TRUE  
+all.equal(phyto_predkernel[,,], zoomizerpredkernel[,,1:71], check.attributes = FALSE) #TRUE  
 
 all.equal(phyto_predkernel[1,,], zoomizerpredkernel[1,,1:71], check.attributes=FALSE)   #TRUE  Flagellates 
 all.equal(phyto_predkernel[2,,], zoomizerpredkernel[2,,1:71], check.attributes=FALSE)   #TRUE  Ciliates    
@@ -307,7 +313,7 @@ all.equal(phyto_predkernel[12,,], zoomizerpredkernel[12,,1:71], check.attributes
 
 #comparing zoo/fish predation kernels
 dim(dynam_predkernel)
-all.equal(dynam_predkernel[,,], zoomizerpredkernel[,,39:216], check.attributes=FALSE)
+all.equal(dynam_predkernel[,,], zoomizerpredkernel[,,39:216], check.attributes = FALSE)
 
 all.equal(dynam_predkernel[1,,], zoomizerpredkernel[1,,39:216], check.attributes=FALSE)   #TRUE  Flagellates 
 all.equal(dynam_predkernel[2,,], zoomizerpredkernel[2,,39:216], check.attributes=FALSE)   #TRUE  Ciliates
@@ -468,19 +474,6 @@ e_growth2 <- new_EReproAndGrowth(params = zoomssparams, n = zoomssparams@initial
 all.equal(e_growth2, e_growth) #TRUE - so e_growth (mizer) and gg (ZooMSS) are being calculated differently...
 #all.equal(sweep(e_growth, 2, params@dw, "/"), gg/0.1, check.attributes = FALSE)
 
-zoomssparams2 <- params
-zoomssparams2@initial_n_pp[1:71] <- zoomsstest$model$nPP
-zoomssparams2@initial_n[] <- zoomsstest$model$N[1,,]
-e_growth3 <- new_EReproAndGrowth(params = zoomssparams2, n = zoomssparams2@initial_n, n_pp = zoomssparams2@initial_n_pp, n_other = zoomssparams2@initial_n_other, t = 0, encounter = getEncounter(zoomssparams2), feeding_level = getFeedingLevel(zoomssparams2))
-
-#View(e_growth3) #even worse
-
-zoomssparams3 <- params
-zoomssparams3@initial_n_pp[1:71] <- zoomsstest$model$nPP / params@dw_full[1:71] / params@dw_full[1:71]
-zoomssparams3@initial_n[] <- sweep(sweep(zoomsstest$model$N[1,,], 2, params@dw, "/"), 2, params@dw, "/")
-e_growth4 <- new_EReproAndGrowth(params = zoomssparams3, n = zoomssparams3@initial_n, n_pp = zoomssparams3@initial_n_pp, n_other = zoomssparams3@initial_n_other, t = 0, encounter = getEncounter(zoomssparams3), feeding_level = getFeedingLevel(zoomssparams3))
-
-#View(e_growth4) #too far - it isn't a factor of dw that it's off by.
 
 
 
@@ -500,7 +493,7 @@ Do the mortality rates agree?
 all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes = FALSE) # TRUE
 
 #predation mortality
-all.equal(M2, getPredMort(zoomizertest@params)[1,], check.attributes = FALSE) 
+all.equal(M2, getPredMort(zoomizertest@params)[1,], check.attributes = FALSE)
 
 #overall mortality
 all.equal(Z, mort, check.attributes = FALSE)
