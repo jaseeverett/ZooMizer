@@ -490,13 +490,13 @@ Do the mortality rates agree?
 #senescence alone:
 # View(zoomsstest$model$M_sb)
 # View(zoomizertest@params@mu_b)
-all.equal(zoomsstest$model$M_sb, zoomizertest@params@mu_b, check.attributes = FALSE) # TRUE
+all.equal(getExtMort(params), zoomsstest$model$M_sb, check.attributes = FALSE) # TRUE
 
 #predation mortality
-all.equal(M2, getPredMort(zoomizertest@params)[1,], check.attributes = FALSE)
+all.equal(getPredMort(zoomizertest@params)[1,], M2, check.attributes = FALSE)
 
 #overall mortality
-all.equal(Z, mort, check.attributes = FALSE)
+all.equal(getMort(params), Z, check.attributes = FALSE)
 
 ```
 
