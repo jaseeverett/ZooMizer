@@ -146,7 +146,7 @@ new_project_simple <- function(params, n, n_pp, n_other, t, dt, steps,
   idx <- 2:no_w
   w_max_idx <- params@w_min_idx
   for (i in 1:length(w_max_idx)) {
-    w_max_idx[i] <- which(round(log10(params@w),2)==round(log10(params@species_params$w_inf[i]),2))
+    w_max_idx[i] <- which(round(log10(params@w),2) == round(log10(params@species_params$w_inf[i]),2))
   }
 
   # Hacky shortcut to access the correct element of a 2D array using 1D notation
@@ -316,6 +316,8 @@ fZooMizer_run <- function(groups, input){
 
   mf.params <- newMultispeciesParams(species_params=groups,
                                      interaction=NULL, #NULL sets all to 1, no strict herbivores
+                                     #min_w = 10^(-10.7),
+                                     max_w = 10^7* (1 + 1e-06),
                                      no_w = 178, #number of zoo+fish size classes;
                                      min_w_pp = 10^(-14.4), #minimum phyto size. Note: use -14.4, not -14.5, otherwise it makes an extra size class
                                      w_pp_cutoff = 10^(input$phyto_max)* (1 + 1e-06), #maximum phyto size
@@ -325,7 +327,7 @@ fZooMizer_run <- function(groups, input){
                                      resource_dynamics = "phyto_fixed",
                                      kappa = kappa,
                                      lambda = lambda,
-                                     RDD = constantRDD(species_params = groups) #first go at this
+                                     RDD = constantRDD(species_params = groups), #first go at this
                                      #pred_kernel = ... #probably easiest to just import this/pre-calculate it, once dimensions are worked out
   )
 
