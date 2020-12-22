@@ -335,9 +335,10 @@ all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attribut
 Ingested prey:
 
 ```{r}
-zoomizerdiet <- getDiet(zoomizertest@params, proportion = FALSE) #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
+zoomizerdiet <- getDiet(zoomizertest@params, proportion = FALSE) 
   #zoomssgrid[[1]]
 dim(zoomizerdiet)
+
 # dimnames(zoomizerdiet)
 # zoomizerdiet[,,13] #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
 dim(zoomsstest$model$phyto_dietkernel)
@@ -345,8 +346,9 @@ dim(zoomsstest$model$phyto_dietkernel)
 all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2]) #sanity check
 
 #phyto ingestion
-all.equal(zoomsstest$model$ingested_phyto, zoomizerdiet[,,13], check.attributes = FALSE)
-  
+#model$temp_eff*(rowSums(sweep(model$phyto_growthkernel, 3, model$nPP, "*"), dims = 2))
+all.equal(zoomizerdiet[,,13], zoomsstest$model$ingested_phyto, check.attributes = FALSE)
+
 ```
 
 
