@@ -31,7 +31,7 @@ Groups$Carbon <- 0.1
 #Groups$Prop[-3] <- 0
 
 
-input_params <- enviro_data[15,]
+input_params <- enviro_data[18,]
 input_params$dt <- 1
 input_params$tmax <- 1
 SaveTimeSteps <- TRUE
@@ -65,8 +65,7 @@ We want to check that the initial setups were all the same. the `all.equal` func
 ```{r collapse=TRUE}
 
 #weight vectors (i.e. size classes)
-length(zoomsstest$model$param$w_phyto)
-sum(zoomizertest@n_pp[1,] > 0) #cuts off at 71 (correct)
+length(zoomsstest$model$param$w_phyto) == sum(zoomizertest@n_pp[1,] > 0) #phyto cuts off at same place
 
 all.equal(zoomsstest$model$param$w, zoomizertest@params@w, check.attributes=FALSE)
 
@@ -292,27 +291,27 @@ These are in agreement. How about feeding kernels?
   
 all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2]) #sanity check
 
-dim(phyto_predkernel)
+wmax_phyto <- dim(phyto_predkernel)[3]
 dim(zoomizerpredkernel)
 
 #sanity check: zoomss phyto and dynamic spectrum feeding kernels all equal:
-all.equal(phyto_predkernel[,,39:71],dynam_predkernel[,,1:(71-39+1)])
+all.equal(phyto_predkernel[,,39:wmax_phyto],dynam_predkernel[,,1:(wmax_phyto-39+1)])
 
 #comparing phytoplankton predation kernels
-all.equal(phyto_predkernel[,,], zoomizerpredkernel[,,1:71], check.attributes = FALSE) #TRUE  
+all.equal(phyto_predkernel[,,], zoomizerpredkernel[,,1:wmax_phyto], check.attributes = FALSE) #TRUE  
 
-all.equal(phyto_predkernel[1,,], zoomizerpredkernel[1,,1:71], check.attributes=FALSE)   #TRUE  Flagellates 
-all.equal(phyto_predkernel[2,,], zoomizerpredkernel[2,,1:71], check.attributes=FALSE)   #TRUE  Ciliates    
-all.equal(phyto_predkernel[3,,], zoomizerpredkernel[3,,1:71], check.attributes=FALSE)   #TRUE  Larvaceans  
-all.equal(phyto_predkernel[4,,], zoomizerpredkernel[4,,1:71], check.attributes=FALSE)   #TRUE  OmniCopepods
-all.equal(phyto_predkernel[5,,], zoomizerpredkernel[5,,1:71], check.attributes=FALSE)   #TRUE  CarnCopepods
-all.equal(phyto_predkernel[6,,], zoomizerpredkernel[6,,1:71], check.attributes=FALSE)   #TRUE  Euphausiids
-all.equal(phyto_predkernel[7,,], zoomizerpredkernel[7,,1:71], check.attributes=FALSE)   #TRUE  Chaetognaths
-all.equal(phyto_predkernel[8,,], zoomizerpredkernel[8,,1:71], check.attributes=FALSE)   #TRUE  Salps
-all.equal(phyto_predkernel[9,,], zoomizerpredkernel[9,,1:71], check.attributes=FALSE)   #TRUE  Jellyfish
-all.equal(phyto_predkernel[10,,], zoomizerpredkernel[10,,1:71], check.attributes=FALSE) #TRUE  Fish_Small
-all.equal(phyto_predkernel[11,,], zoomizerpredkernel[11,,1:71], check.attributes=FALSE) #TRUE  Fish_Med
-all.equal(phyto_predkernel[12,,], zoomizerpredkernel[12,,1:71], check.attributes=FALSE) #TRUE  Fish_Large
+all.equal(phyto_predkernel[1,,], zoomizerpredkernel[1,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  Flagellates 
+all.equal(phyto_predkernel[2,,], zoomizerpredkernel[2,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  Ciliates    
+all.equal(phyto_predkernel[3,,], zoomizerpredkernel[3,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  Larvaceans  
+all.equal(phyto_predkernel[4,,], zoomizerpredkernel[4,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  OmniCopepods
+all.equal(phyto_predkernel[5,,], zoomizerpredkernel[5,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  CarnCopepods
+all.equal(phyto_predkernel[6,,], zoomizerpredkernel[6,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  Euphausiids
+all.equal(phyto_predkernel[7,,], zoomizerpredkernel[7,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  Chaetognaths
+all.equal(phyto_predkernel[8,,], zoomizerpredkernel[8,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  Salps
+all.equal(phyto_predkernel[9,,], zoomizerpredkernel[9,,1:wmax_phyto], check.attributes=FALSE)   #TRUE  Jellyfish
+all.equal(phyto_predkernel[10,,], zoomizerpredkernel[10,,1:wmax_phyto], check.attributes=FALSE) #TRUE  Fish_Small
+all.equal(phyto_predkernel[11,,], zoomizerpredkernel[11,,1:wmax_phyto], check.attributes=FALSE) #TRUE  Fish_Med
+all.equal(phyto_predkernel[12,,], zoomizerpredkernel[12,,1:wmax_phyto], check.attributes=FALSE) #TRUE  Fish_Large
 
 #comparing zoo/fish predation kernels
 dim(dynam_predkernel)
