@@ -33,7 +33,7 @@ Groups$Carbon <- 0.1
 
 
 
-input_params <- enviro_data[10,]
+input_params <- enviro_data[11,]
 input_params$dt <- 1
 input_params$tmax <- 1
 SaveTimeSteps <- TRUE
@@ -92,7 +92,7 @@ all.equal(zoomsstest$model$N[1,,] , zoomizertest@params@initial_n*matrix(zoomize
 initialnsaved <- readRDS("data/initialn.RDS")
 all.equal(zoomsstest$model$N[1,,] , sweep(zoomizertest@params@initial_n, 2, zoomizertest@params@dw, "*"), check.attributes=FALSE)
 # quick check here: abundances after a time step?
-all.equal(zoomsstest$model$N[2,,] , sweep(zoomizertest@n[2,,],2, zoomizertest@params@dw, "*"), check.attributes=FALSE)
+all.equal(sweep(zoomizertest@n[2,,],2, zoomizertest@params@dw, "*"), zoomsstest$model$N[2,,] , check.attributes=FALSE)
 
 
 ```
@@ -290,15 +290,6 @@ These are in agreement. How about feeding kernels?
   dim(zoomizerpredkernel)
 #all.equal(sp_dynam_predkernel[7,,],zoomizerpredkernel[7,,(216-178+1):216], check.attributes=FALSE) # different dimensions - how to compare?
   
-  zoomizerdiet <- getDiet(zoomizertest@params, proportion = FALSE) #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
-  #zoomssgrid[[1]]
-  dim(zoomizerdiet)
-  #dimnames(zoomizerdiet)
-  #zoomizerdiet[,,13] #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
-  dim(zoomsstest$model$phyto_dietkernel)
-  
-all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2]) #sanity check
-
 wmax_phyto <- dim(phyto_predkernel)[3]
 dim(zoomizerpredkernel)
 
@@ -337,6 +328,24 @@ all.equal(dynam_predkernel[9,,], zoomizerpredkernel[9,,39:216], check.attributes
 all.equal(dynam_predkernel[10,,], zoomizerpredkernel[10,,39:216], check.attributes=FALSE) #TRUE  Fish_Small
 all.equal(dynam_predkernel[11,,], zoomizerpredkernel[11,,39:216], check.attributes=FALSE) #TRUE  Fish_Med
 all.equal(dynam_predkernel[12,,], zoomizerpredkernel[12,,39:216], check.attributes=FALSE) #TRUE  Fish_Large
+
+
+```
+
+Ingested prey:
+
+```{r}
+zoomizerdiet <- getDiet(zoomizertest@params, proportion = FALSE) #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
+  #zoomssgrid[[1]]
+dim(zoomizerdiet)
+# dimnames(zoomizerdiet)
+# zoomizerdiet[,,13] #rowSums(sweep(params@pred_kernel, 3, params@dw_full * params@w_full * n_pp, "*"), dims = 2)
+dim(zoomsstest$model$phyto_dietkernel)
+  
+all.equal(zoomsstest$model$phyto_dietkernel[1,2,1],zoomsstest$model$phyto_dietkernel[1,2,2]) #sanity check
+
+#phyto ingestion
+all.equal(zoomsstest$model$ingested_phyto, zoomizerdiet[,,13], check.attributes = FALSE)
   
 ```
 
@@ -475,7 +484,7 @@ phyto_encounter <- params@other_params$temp_eff * params@search_vol * (phi_prey_
 
 #plug zoomss into zoomizer
 zoomssparams <- params
-zoomssparams@initial_n_pp[1:71] <- zoomsstest$model$nPP / params@dw_full[1:71]
+zoomssparams@initial_n_pp[1:wmax_phyto] <- zoomsstest$model$nPP / params@dw_full[1:wmax_phyto]
 zoomssparams@initial_n[] <- sweep(zoomsstest$model$N[1,,], 2, params@dw, "/")
 #new_Encounter(params = zoomssparams, n = zoomssparams@initial_n, n_pp = zoomssparams@initial_n_pp, n_other = zoomssparams@initial_n_other, t=0)
 
