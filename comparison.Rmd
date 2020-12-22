@@ -31,7 +31,9 @@ Groups$Carbon <- 0.1
 #Groups$Prop[-3] <- 0
 
 
-input_params <- enviro_data[18,]
+
+
+input_params <- enviro_data[10,]
 input_params$dt <- 1
 input_params$tmax <- 1
 SaveTimeSteps <- TRUE
@@ -48,6 +50,12 @@ input_params$tmaxx <- input_params$tmax
 source("fZooMizer_run.R")
 environment(new_project_simple) <- asNamespace('mizer')
 assignInNamespace("project_simple", new_project_simple, ns = "mizer")
+
+environment(new_newMultispeciesParams) <- asNamespace('mizer')
+assignInNamespace("newMultispeciesParams", new_newMultispeciesParams, ns = "mizer")
+
+environment(new_emptyParams) <- asNamespace('mizer')
+assignInNamespace("emptyParams", new_emptyParams, ns = "mizer")
 
 groups <- read.csv("data/TestGroups_mizer.csv") #[c(1,3),]
 groups$Carbon <- 0.1
