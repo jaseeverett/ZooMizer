@@ -47,7 +47,8 @@ fZooMSS_Setup <- function(param){
     nPP = 10^(param$phyto_int)*(param$w_phyto^(param$phyto_slope)), # Phytoplankton abundance spectrum
 
     # Group parameters storage
-    phyto_growthkernel = array(NA, dim = c(param$ngrps, param$ngrid, param$ngridPP)), # predation on phytoplankton
+    phyto_growthkernel = array(NA, dim = c(param$ngrps, param$ngrid, param$ngridPP)),
+    phyto_growthkernel2 = array(NA, dim = c(param$ngrps, param$ngrid, param$ngridPP)),# predation on phytoplankton
     phyto_diffkernel = array(NA, dim = c(param$ngrps, param$ngrid, param$ngridPP)), # diffusion from phytoplankton consumption
     phyto_dietkernel = array(NA, dim = c(param$ngrps, param$ngrid, param$ngridPP)), # diet from phytoplankton
     dynam_growthkernel = array(NA, dim = c(param$ngrps, param$ngrid, param$ngrid)), # predation on zoo and fish
@@ -209,6 +210,10 @@ fZooMSS_Setup <- function(param){
     # Predators are rows, prey are columns
     model$phyto_growthkernel[i,,] <- matrix(SearchVol[i,], nrow = param$ngrid, ncol = param$ngridPP) *
       sp_phyto_predkernel * gg_log_t_phyto * sm_phyto
+
+    model$phyto_growthkernel2[i,,] <- matrix(SearchVol[i,], nrow = param$ngrid, ncol = param$ngridPP) *
+      sp_phyto_predkernel
+
     model$dynam_growthkernel[i,,] <- matrix(SearchVol[i,], nrow = param$ngrid, ncol = param$ngrid)*
       sp_dynam_predkernel*gg_log_t_dynam*sm_dynam
 
@@ -264,6 +269,15 @@ fZooMSS_Setup <- function(param){
   model$diet_pico_phyto <- model$temp_eff*(rowSums(sweep(model$phyto_dietkernel, 3, model$nPP*c(log10(model$param$w_phyto) < -11.5), "*"), dims = 2))
   model$diet_nano_phyto <- model$temp_eff*(rowSums(sweep(model$phyto_dietkernel, 3, model$nPP*c(log10(model$param$w_phyto) >= -11.5 & log10(model$param$w_phyto) < -8.5), "*"), dims = 2))
   model$diet_micro_phyto <- model$temp_eff*(rowSums(sweep(model$phyto_dietkernel, 3, model$nPP*c(log10(model$param$w_phyto) >= -8.5), "*"), dims = 2))
+
+  model$dw_phyto <- (10^param$dx - 1) * param$w_phyto
+  model$phi_prey_background <- assim_phyto * phyto_theta[,1] *
+    rowSums(sweep(
+      model$phyto_growthkernel2, 3, #model$dw_phyto *  # should remove this to match zoomizer
+                                    model$param$w_phyto * model$nPP,
+      "*", check.margin = FALSE), dims = 2)
+  model$phyto_encounter <- model$temp_eff * SearchVol * model$phi_prey_background
+
 
   return(model)
 } # End of Setup function

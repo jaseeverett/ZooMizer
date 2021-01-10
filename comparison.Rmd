@@ -468,7 +468,7 @@ all.equal(C.iter, b, check.attributes = FALSE)
 
 ```
 
-If you look at the relevant comparisons (`a` against `A` and `b` against `C`), it's apparent that the Mizer values are around an order of magnitude too high. This might mean that something has been counted twice in the ZooMizer code?
+If you look at the relevant comparisons (`a` against `A` and `b` against `C`), it's apparent that the Mizer values are about 7 times too high. This might mean that something has been counted twice in the ZooMizer code?
 
 Note that `gg` in ZooMSS is mostly made up of the ingested phyto for small organisms. What is ingested phyto for ZooMizer?
 
@@ -495,8 +495,12 @@ e_growth2 <- new_EReproAndGrowth(params = zoomssparams, n = zoomssparams@initial
 all.equal(e_growth2, e_growth) #TRUE - so e_growth (mizer) and gg (ZooMSS) are being calculated differently...
 #all.equal(sweep(e_growth, 2, params@dw, "/"), gg/0.1, check.attributes = FALSE)
 
+#trying to recreate mizer encounter in ZooMSS
+all.equal(zoomsstest$model$phyto_growthkernel2, zoomizertest@params@pred_kernel[,,1:wmax_phyto], check.attributes = FALSE)
 
 
+all.equal(zoomsstest$model$phi_prey_background, phi_prey_background, check.attributes = FALSE)
+all.equal(phyto_encounter,zoomsstest$model$phyto_encounter, check.attributes = FALSE)
 
 ```
 
