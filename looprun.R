@@ -9,8 +9,7 @@ assignInNamespace("project_simple", new_project_simple, ns = "mizer")
 Groups <- read.csv("data/TestGroups_mizer.csv")
 
 enviro <- readRDS("data/enviro_test20.RDS")
-enviro <- fZooMSS_CalculatePhytoParam(enviro)
-enviro$dt <- 0.01
+enviro$dt <- 001
 enviro$tmaxx <- 1000
 
 assim_eff <- matrix(Groups$GrossGEscale * groups$Carbon, nrow = nrow(Groups), ncol = nrow(Groups))
@@ -27,26 +26,17 @@ zoomizergrid <- list()
 
 
 for (i in 1:nrow(enviro)) {
-  phyto_fixed <- function(params, n, n_pp, n_other, rates, dt, kappa = 10^enviro$phyto_int[i], lambda= 1-enviro$phyto_slope[i], ... ) {
-    npp <- kappa*params@w_full^(-lambda) #returns the fixed spectrum at every time step
-    npp[params@w_full > params@resource_params$w_pp_cutoff] <- 0
-    return(npp)
-  }
-  
-  sim <- fZooMizer_run(groups = Groups, input = enviro[i,])
+   sim <- fZooMizer_run(groups = Groups, input = enviro[i,])
   zoomizergrid[[i]] <- sim
   rm(sim)
 }
-
-zoomizeroutput <- zoomizergrid[[15]]
-saveRDS(zoomizeroutput,file="zoomizeroutputdt001.rds")
 
 saveRDS(zoomizergrid, file="test_grid.RDS", version = 2)
 
 # #apples to apples comparison:
 # 
 # zoomizeraves <- list()
-# 
+
 # for (i in 1:nrow(enviro)) {
 #   zoomizeraves[[i]] <- apply(as.array(zoomizergrid[[i]]@n[501:1001,,]),c(2,3),'mean')
 # }
@@ -61,14 +51,3 @@ saveRDS(zoomizergrid, file="test_grid.RDS", version = 2)
 # }
 # 
 # saveRDS(zgrid, "zoomssgrid.rds")
-
-#library(assert_that)
-are_equal(zoomsstest$model$N[1,,] , zoomizeroutput@params@initial_n[,], check.attributes=FALSE)
-all.equal(zoomsstest$model$M_sb, zoomizeroutput@params@mu_b, check.attributes=FALSE)
-are_equal(zoomsstest$model$nPP ,zoomizeroutput@n_pp[1,1:64], check.attributes=FALSE)
-
-are_equal(zoomsstest$model$param$w, zoomizeroutput@params@w, check.attributes=FALSE)
-
-zoomizeroutput@params@search_vol
-
-are_equal(zoomsstest$model$N[2,,] / zoomsstest$model$param$w, zoomizeroutput@n[2,,], check.attributes=FALSE)

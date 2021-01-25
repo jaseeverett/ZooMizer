@@ -14,7 +14,7 @@ jobname <- '202001027_zoomizercomparison' #job name used on queue
 ## Build environmental data
 enviro <- readRDS("data/enviro_test20.RDS")
 enviro_data <- fZooMSS_CalculatePhytoParam(enviro) # Calculate Phytoplankton Parameters
-enviro_data$dt
+enviro_data$dt <- 1
 saveRDS(enviro_data, "enviro_Matrix.RDS")
 
 # NOW WE BREAK THIS UP INTO CHUNKS OF 10 RUNS AND CREATE A LIST
@@ -32,6 +32,7 @@ if (HPC == TRUE){
 } else {
   ID <- enviro_row
 }
+
 
 all_params <- enviro_list[[ID]]
 

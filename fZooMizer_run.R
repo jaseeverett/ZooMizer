@@ -46,24 +46,24 @@ setZooMizerConstants <- function(params, Groups, sst){
   prey_weight_matrix <- matrix(params@w_full, nrow = length(params@w), ncol = length(params@w_full), byrow = TRUE)
   pred_weight_matrix <- matrix(params@w, nrow = length(params@w), ncol = length(params@w_full))
 
-    for (i in 1:nrow(params@species_params)) {
+  for (i in 1:nrow(params@species_params)) {
     ## Senescence mortality
-    if (params@species_params$Type[i] == "Zooplankton") {
-      M_sb[i,] <- ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
-      M_sb[i, params@species_params$w_inf[i] < params@w * (1 + 1e-06)] <- 0
-      M_sb[i, params@species_params$w_mat[i] > params@w * (1 - 1e-06)] <- 0
-    }
-
-    if (params@species_params$Type[i] == "Fish") {
-      M_sb[i,] <- 0.1*ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
-      M_sb[i, params@species_params$w_inf[i] < params@w * (1 + 1e-06)] <- 0
-      M_sb[i, params@species_params$w_mat[i] > params@w * (1 - 1e-06)] <- 0
-    }
+    # if (params@species_params$Type[i] == "Zooplankton") {
+    #   M_sb[i,] <- ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
+    #   M_sb[i, params@species_params$w_inf[i] < params@w * (1 + 1e-06)] <- 0
+    #   M_sb[i, params@species_params$w_mat[i] > params@w * (1 - 1e-06)] <- 0
+    # }
+    #
+    # if (params@species_params$Type[i] == "Fish") {
+    #   M_sb[i,] <- 0.1*ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
+    #   M_sb[i, params@species_params$w_inf[i] < params@w * (1 + 1e-06)] <- 0
+    #   M_sb[i, params@species_params$w_mat[i] > params@w * (1 - 1e-06)] <- 0
+    # }
 
     ### Search volume
     SearchVol[i,] <- (params@species_params$gamma[i])*(params@w^(params@species_params$q[i]))
     SearchVol[i, params@species_params$w_inf[i] < params@w * (1 + 1e-06)] <- 0
-    SearchVol[i, params@species_params$w_min[i] > params@w * (1 - 1e-06)] <- 0
+    SearchVol[i, params@species_params$w_min[i] > params@w * (1 + 1e-06)] <- 0
 
     ### Predation Kernels
     if (is.na(params@species_params$PPMRscale[i]) == FALSE){ # If group has an m-value (zooplankton)
@@ -97,9 +97,10 @@ setZooMizerConstants <- function(params, Groups, sst){
     }
 
   }
+  SearchVol[12,178] <- (params@species_params$gamma[12])*(params@w[178]^(params@species_params$q[12])) #adding last size class by hand
 
   #temperature effect
-  M_sb <- params@other_params$temp_eff * M_sb # Incorporate temp effect on senscence mortality
+  # M_sb <- params@other_params$temp_eff * M_sb # Incorporate temp effect on senscence mortality
 
 
   params@initial_n_pp <- params@resource_params$kappa * params@w_full^(1 - params@resource_params$lambda)/params@dw_full
@@ -120,7 +121,7 @@ setZooMizerConstants <- function(params, Groups, sst){
   #dimnames(tempN) <- dimnames(params@initial_n)
   params@initial_n[] <- tempN
 
-  params <- setExtMort(params, z0 = M_sb)
+  #params <- setExtMort(params, z0 = M_sb)
   params <- setSearchVolume(params, search_vol = SearchVol)
   params <- setPredKernel(params, pred_kernel)
 
@@ -128,13 +129,13 @@ setZooMizerConstants <- function(params, Groups, sst){
 }
 
 setassim_eff <- function(groups){
-assim_eff = matrix(groups$GrossGEscale * groups$Carbon, nrow = nrow(groups), ncol = nrow(groups))
-#get_filterfeeders <- which(groups$FeedType == "FilterFeeder")
+  assim_eff = matrix(groups$GrossGEscale * groups$Carbon, nrow = nrow(groups), ncol = nrow(groups))
+  #get_filterfeeders <- which(groups$FeedType == "FilterFeeder")
 
-#for (i in get_filterfeeders) {
-#  assim_eff[,i] <- assim_eff[,i] / groups$Carbon[i]
-#}
-return(t(assim_eff))
+  #for (i in get_filterfeeders) {
+  #  assim_eff[,i] <- assim_eff[,i] / groups$Carbon[i]
+  #}
+  return(t(assim_eff))
 }
 
 new_project_simple <- function(params, n, n_pp, n_other, t, dt, steps,
@@ -146,7 +147,7 @@ new_project_simple <- function(params, n, n_pp, n_other, t, dt, steps,
   idx <- 2:no_w
   w_max_idx <- params@w_min_idx
   for (i in 1:length(w_max_idx)) {
-     w_max_idx[i] <- which(round(log10(params@w),2) == round(log10(params@species_params$w_inf[i]),2))
+    w_max_idx[i] <- which(round(log10(params@w),2) == round(log10(params@species_params$w_inf[i]),2))
   }
 
   # Hacky shortcut to access the correct element of a 2D array using 1D notation
@@ -262,7 +263,6 @@ new_Encounter <- function(params, n, n_pp, n_other, t, ...) {
       params@pred_kernel, 3, params@dw_full * params@w_full * n_pp,
       "*", check.margin = FALSE), dims = 2)
   encounter <- params@other_params$temp_eff * params@search_vol * (phi_prey_species + phi_prey_background)
-
   dimnames(encounter) <- dimnames(params@metab)
 
   # Add contributions from other components
@@ -281,7 +281,7 @@ new_PredRate <- function(params, n, n_pp, n_other, t, feeding_level, ...)
 {
   n_total_in_size_bins <- sweep(n, 2, params@dw, "*",
                                 check.margin = FALSE)
-  pred_rate <- sweep(params@pred_kernel, c(1, 2), (1 - feeding_level) * params@search_vol * n_total_in_size_bins,
+  pred_rate <- sweep(params@pred_kernel, c(1, 2), (1 - feeding_level) * params@other_params$temp_eff * params@search_vol * n_total_in_size_bins,
                      "*", check.margin = FALSE)
   pred_rate <- colSums(aperm(pred_rate, c(2, 1, 3)), dims = 1)
   return(pred_rate)
@@ -315,23 +315,24 @@ fZooMizer_run <- function(groups, input){
   #todo - ramp up constant repro for coexistence
 
   mf.params <- new_newMultispeciesParams(species_params=groups,
-                                     interaction=NULL, #NULL sets all to 1, no strict herbivores
-                                     #min_w = 10^(-10.7),
-                                     #max_w = 10^7* (1 + 1e-06),
-                                     #no_w = 178, #number of zoo+fish size classes;
-                                     w_full = 10^seq(from = -14.5, to = (log10(max(groups$w_inf)) + 0.1), by = 0.1),
-                                     #min_w_pp = 10^(-14.4), #minimum phyto size. Note: use -14.4, not -14.5, otherwise it makes an extra size class
-                                     w_pp_cutoff = 10^(input$phyto_max)* (1 + 1e-06), #maximum phyto size
-                                     n = 0.7, #The allometric growth exponent used in ZooMSS
-                                     z0pre = 1, #external mortality (senescence)
-                                     z0exp = 0.3,
-                                     resource_dynamics = "phyto_fixed",
-                                     kappa = kappa,
-                                     lambda = lambda,
-                                     RDD = constantRDD(species_params = groups), #first go at this
-                                     #pred_kernel = ... #probably easiest to just import this/pre-calculate it, once dimensions are worked out
+                                         interaction=NULL, #NULL sets all to 1, no strict herbivores
+                                         #min_w = 10^(-10.7),
+                                         #max_w = 10^7* (1 + 1e-06),
+                                         #no_w = 178, #number of zoo+fish size classes;
+                                         w_full = 10^seq(from = -14.5, to = (log10(max(groups$w_inf)) + 0.1), by = 0.1),
+                                         #min_w_pp = 10^(-14.4), #minimum phyto size. Note: use -14.4, not -14.5, otherwise it makes an extra size class
+                                         w_pp_cutoff = 10^(input$phyto_max)* (1 + 1e-06), #maximum phyto size
+                                         n = 0.7, #The allometric growth exponent used in ZooMSS
+                                         z0pre = 1, #external mortality (senescence)
+                                         z0exp = 0.3,
+                                         resource_dynamics = "phyto_fixed",
+                                         kappa = kappa,
+                                         lambda = lambda,
+                                         RDD = constantRDD(species_params = groups), #first go at this
+                                         #pred_kernel = ... #probably easiest to just import this/pre-calculate it, once dimensions are worked out
   )
 
+  mf.params@species_params$w_min <- groups$w_min  #fix Mizer setting the egg weight to be one size larger for some groups.
   #mf.params@initial_n[] <- readRDS("data/initialn.RDS")
 
   temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
@@ -351,7 +352,7 @@ fZooMizer_run <- function(groups, input){
   mf.params <- setRateFunction(mf.params, "EReproAndGrowth", "new_EReproAndGrowth")
   mf.params <- setRateFunction(mf.params, "FeedingLevel", "newFeedingLevel")
   mf.params <- setRateFunction(mf.params, "Encounter", "new_Encounter")
-
+  mf.params <- setRateFunction(mf.params, "PredRate", "new_PredRate")
   mf.params <- setReproduction(mf.params, repro_prop = matrix(0, nrow = nrow(mf.params@psi), ncol = ncol(mf.params@psi)))
 
 
@@ -359,7 +360,7 @@ fZooMizer_run <- function(groups, input){
   M_sb <- getExtMort(mf.params)
   M_sb[] <- readRDS("data/mu_b.RDS")
   temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
-  M_sb <- temp_eff * M_sb # Incorporate temp effect on senscence mortality
+  M_sb <- temp_eff * M_sb  # Incorporate temp effect on senscence mortality
 
   mf.params <- setExtMort(mf.params, z0 = M_sb)
 
