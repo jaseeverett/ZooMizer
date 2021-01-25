@@ -469,7 +469,7 @@ w <- matrix(hack@params@w, nrow = nrow(hack@params@species_params), ncol = lengt
 dw <- matrix(hack@params@dw, nrow = nrow(hack@params@species_params), ncol = length(hack@params@dw), byrow = TRUE)
 
 #load in ZooMizer data for comparison
-zoomizergrid <- readRDS("test_grid.RDS")
+zoomizergrid <- readRDS("zoomizer_test20_dt1.RDS")
 
 tmax <- dim(zoomizergrid[[1]]@n)[1]
 
