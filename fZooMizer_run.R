@@ -4,36 +4,36 @@ phyto_fixed <- function(params, n, n_pp, n_other, rates, dt, kappa=params@resour
   return(npp)
 }
 
-setmort_test <- function(params, sst){
-  #### CALCULATES CONSTANT BITS OF THE MODEL FUNCTIONS FOR EACH GROUP
-  M_sb <- getExtMort(params)
-  M_sb[] <- readRDS("data/mu_b.RDS")
-  ZSpre <- 1 # senescence mortality prefactor
-  ZSexp <- 0.3 # senescence mortality exponent
-  #
-  # for(i in 1:nrow(params@species_params)){
-  #   ## Senescence mortality
-  #   if(params@species_params$Type[i] == "Zooplankton"){
-  #     M_sb[i,] <- ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
-  #     M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
-  #     M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
-  #   }
-  #
-  #   if(params@species_params$Type[i] == "Fish"){
-  #     M_sb[i,] <- 0.1*ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
-  #     M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
-  #     M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
-  #   }
-  #   }
-
-  #temperature effect
-
-  M_sb <- params@other_params$temp_eff * M_sb # Incorporate temp effect on senscence mortality
-
-  params <- setExtMort(params, z0 = M_sb)
-
-  return(params)
-}
+# setmort_test <- function(params, sst){
+#   #### CALCULATES CONSTANT BITS OF THE MODEL FUNCTIONS FOR EACH GROUP
+#   M_sb <- getExtMort(params)
+#   M_sb[] <- readRDS("data/mu_b.RDS")
+#   ZSpre <- 1 # senescence mortality prefactor
+#   ZSexp <- 0.3 # senescence mortality exponent
+#   #
+#   # for(i in 1:nrow(params@species_params)){
+#   #   ## Senescence mortality
+#   #   if(params@species_params$Type[i] == "Zooplankton"){
+#   #     M_sb[i,] <- ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
+#   #     M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
+#   #     M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
+#   #   }
+#   #
+#   #   if(params@species_params$Type[i] == "Fish"){
+#   #     M_sb[i,] <- 0.1*ZSpre*(params@w/(params@species_params$w_mat[i]))^ZSexp
+#   #     M_sb[i, params@species_params$w_inf[i] < params@w] <- 0
+#   #     M_sb[i, params@species_params$w_mat[i] > params@w] <- 0
+#   #   }
+#   #   }
+#
+#   #temperature effect
+#
+#   M_sb <- params@other_params$temp_eff * M_sb # Incorporate temp effect on senscence mortality
+#
+#   params <- setExtMort(params, z0 = M_sb)
+#
+#   return(params)
+# }
 
 setZooMizerConstants <- function(params, Groups, sst){
   #### CALCULATES CONSTANT BITS OF THE MODEL FUNCTIONS FOR EACH GROUP
@@ -100,7 +100,9 @@ setZooMizerConstants <- function(params, Groups, sst){
   SearchVol[12,178] <- (params@species_params$gamma[12])*(params@w[178]^(params@species_params$q[12])) #adding last size class by hand
 
   #temperature effect
+
   # M_sb <- params@other_params$temp_eff * M_sb # Incorporate temp effect on senscence mortality
+  M_sb <- params@other_params$temp_eff * M_sb * 10 # Incorporate temp effect on senscence mortality
 
 
   params@initial_n_pp <- params@resource_params$kappa * params@w_full^(1 - params@resource_params$lambda)/params@dw_full
@@ -348,7 +350,7 @@ fZooMizer_run <- function(groups, input){
 
   #mf.params <- setParams(mf.params)
 
- # mf.params <- setRateFunction(mf.params, "PredRate", "new_PredRate")
+  # mf.params <- setRateFunction(mf.params, "PredRate", "new_PredRate")
   mf.params <- setRateFunction(mf.params, "EReproAndGrowth", "new_EReproAndGrowth")
   mf.params <- setRateFunction(mf.params, "FeedingLevel", "newFeedingLevel")
   mf.params <- setRateFunction(mf.params, "Encounter", "new_Encounter")
@@ -360,7 +362,8 @@ fZooMizer_run <- function(groups, input){
   M_sb <- getExtMort(mf.params)
   M_sb[] <- readRDS("data/mu_b.RDS")
   temp_eff <-  matrix(2.^((sst - 30)/10), nrow = length(mf.params@species_params$species), ncol = length(mf.params@w))
-  M_sb <- temp_eff * M_sb  # Incorporate temp effect on senscence mortality
+
+  M_sb <- temp_eff * M_sb *10 # Incorporate temp effect on senscence mortality
 
   mf.params <- setExtMort(mf.params, z0 = M_sb)
 
@@ -413,27 +416,27 @@ new_newMultispeciesParams <- function(
   catchability = NULL,
   initial_effort = NULL) {
   no_sp <- nrow(species_params)
-  
+
   ## For backwards compatibility, allow r_max instead of R_max
   if (!("R_max" %in% names(species_params)) &&
       "r_max" %in% names(species_params)) {
     names(species_params)[names(species_params) == "r_max"] <- "R_max"
   }
-  
+
   ## Create MizerParams object ----
   params <- new_emptyParams(species_params,
-                        gear_params,
-                        w_full = w_full,
-                        no_w = no_w, 
-                        min_w = min_w,  
-                        max_w = max_w, 
-                        min_w_pp = min_w_pp)
-  
+                            gear_params,
+                            w_full = w_full,
+                            no_w = no_w,
+                            min_w = min_w,
+                            max_w = max_w,
+                            min_w_pp = min_w_pp)
+
   ## Fill the slots ----
-  params <- params %>% 
-    set_species_param_default("n", n) %>% 
+  params <- params %>%
+    set_species_param_default("n", n) %>%
     set_species_param_default("p", p)
-  params <- set_species_param_default(params, "q", 
+  params <- set_species_param_default(params, "q",
                                       lambda - 2 + params@species_params$n)
   if (is.null(interaction)) {
     interaction <- matrix(1, nrow = no_sp, ncol = no_sp)
@@ -472,33 +475,33 @@ new_newMultispeciesParams <- function(
               selectivity = selectivity,
               catchability = catchability,
               initial_effort = initial_effort)
-  
+
   params@initial_n <- get_initial_n(params)
   params@initial_n_pp <- params@cc_pp
   params@A <- rep(1, nrow(species_params))
-  
+
   return(params)
 }
 
 new_emptyParams <- function(species_params,
-                        gear_params = data.frame(),
-                        no_w = 100,
-                        min_w = 0.001,
-                        w_full = NA,
-                        max_w = NA,
-                        min_w_pp = 1e-12) {
+                            gear_params = data.frame(),
+                            no_w = 100,
+                            min_w = 0.001,
+                            w_full = NA,
+                            max_w = NA,
+                            min_w_pp = 1e-12) {
   assert_that(is.data.frame(species_params),
               is.data.frame(gear_params),
               no_w > 10)
-  
+
   ## Set defaults ----
   if (is.na(min_w_pp)) min_w_pp <- 1e-12
   species_params <- set_species_param_default(species_params, "w_min", min_w)
   min_w <- min(species_params$w_min)
-  
+
   species_params <- validSpeciesParams(species_params)
   gear_params <- validGearParams(gear_params, species_params)
-  
+
   if (is.na(max_w)) {
     max_w <- max(species_params$w_inf)
   } else {
@@ -509,77 +512,77 @@ new_emptyParams <- function(species_params,
            toString(too_large))
     }
   }
-  
+
   # Set up grids ----
   if (missing(w_full)) {
-  # set up logarithmic grids
-  dx <- log10(max_w / min_w) / (no_w - 1)
-  # Community grid
-  w <- 10^(seq(from = log10(min_w), by = dx, length.out = no_w))
-  # dw[i] = w[i+1] - w[i]. Following formula works also for last entry dw[no_w]
-  dw <- (10^dx - 1) * w
-  # To avoid issues due to numerical imprecision
-  min_w <- w[1]
-  
-  # For fft methods we need a constant log bin size throughout. 
-  # Therefore we use as many steps as are necessary so that the first size
-  # class includes min_w_pp.
-  x_pp <- rev(seq(from = log10(min_w),
-                  to = log10(min_w_pp),
-                  by = -dx)) - dx
-  w_full <- c(10^x_pp, w)
-  # If min_w_pp happened to lie exactly on a grid point, we now added
-  # one grid point too much which we need to remove again
-  if (w_full[2] == min_w_pp) {
-    w_full <- w_full[2:length(w_full)]
-  }
-  no_w_full <- length(w_full)
-  dw_full <- (10^dx - 1) * w_full	
+    # set up logarithmic grids
+    dx <- log10(max_w / min_w) / (no_w - 1)
+    # Community grid
+    w <- 10^(seq(from = log10(min_w), by = dx, length.out = no_w))
+    # dw[i] = w[i+1] - w[i]. Following formula works also for last entry dw[no_w]
+    dw <- (10^dx - 1) * w
+    # To avoid issues due to numerical imprecision
+    min_w <- w[1]
+
+    # For fft methods we need a constant log bin size throughout.
+    # Therefore we use as many steps as are necessary so that the first size
+    # class includes min_w_pp.
+    x_pp <- rev(seq(from = log10(min_w),
+                    to = log10(min_w_pp),
+                    by = -dx)) - dx
+    w_full <- c(10^x_pp, w)
+    # If min_w_pp happened to lie exactly on a grid point, we now added
+    # one grid point too much which we need to remove again
+    if (w_full[2] == min_w_pp) {
+      w_full <- w_full[2:length(w_full)]
+    }
+    no_w_full <- length(w_full)
+    dw_full <- (10^dx - 1) * w_full
   } else {
-  #     # use supplied w_full
-     no_w_full <- length(w_full) - 1
-     dw_full <- diff(w_full)
-     w_full <- w_full[seq_along(dw_full)]
-  #     # Check that sizes are increasing
-     if (any(dw_full <= 0)) {
-         stop("w_full must be increasing.")
-     }
-     w_min_idx <- match(min_w, w_full)
-     if (is.na(w_min_idx)) {
-         stop("w_min must be contained in w_full.")
-     }
-     w <- w_full[w_min_idx:no_w_full]
-     dw <- dw_full[w_min_idx:no_w_full]
-     no_w <- length(w)
-     min_w_pp <- w_full[1]
+    #     # use supplied w_full
+    no_w_full <- length(w_full) - 1
+    dw_full <- diff(w_full)
+    w_full <- w_full[seq_along(dw_full)]
+    #     # Check that sizes are increasing
+    if (any(dw_full <= 0)) {
+      stop("w_full must be increasing.")
+    }
+    w_min_idx <- match(min_w, w_full)
+    if (is.na(w_min_idx)) {
+      stop("w_min must be contained in w_full.")
+    }
+    w <- w_full[w_min_idx:no_w_full]
+    dw <- dw_full[w_min_idx:no_w_full]
+    no_w <- length(w)
+    min_w_pp <- w_full[1]
   }
-  
+
   # Basic arrays for templates ----
   no_sp <- nrow(species_params)
   species_names <- as.character(species_params$species)
   gear_names <- unique(gear_params$gear)
-  mat1 <- array(0, dim = c(no_sp, no_w), 
+  mat1 <- array(0, dim = c(no_sp, no_w),
                 dimnames = list(sp = species_names, w = signif(w,3)))
   ft_pred_kernel <- array(NA, dim = c(no_sp, no_w_full),
                           dimnames = list(sp = species_names, k = 1:no_w_full))
   ft_mask <- plyr::aaply(species_params$w_inf, 1,
                          function(x) w_full < x, .drop = FALSE)
-  
-  selectivity <- array(0, dim = c(length(gear_names), no_sp, no_w), 
-                       dimnames = list(gear = gear_names, sp = species_names, 
+
+  selectivity <- array(0, dim = c(length(gear_names), no_sp, no_w),
+                       dimnames = list(gear = gear_names, sp = species_names,
                                        w = signif(w, 3)))
-  catchability <- array(0, dim = c(length(gear_names), no_sp), 
+  catchability <- array(0, dim = c(length(gear_names), no_sp),
                         dimnames = list(gear = gear_names, sp = species_names))
   initial_effort <- rep(0, length(gear_names))
   names(initial_effort) <- gear_names
-  
+
   interaction <- array(1, dim = c(no_sp, no_sp),
                        dimnames = list(predator = species_names,
                                        prey = species_names))
-  
+
   vec1 <- as.numeric(rep(NA, no_w_full))
   names(vec1) <- signif(w_full, 3)
-  
+
   # Round down w_min to lie on grid points and store the indices of these
   # grid points in w_min_idx
   w_min_idx <- as.vector(suppressWarnings(
@@ -589,15 +592,15 @@ new_emptyParams <- function(species_params,
   w_min_idx[w_min_idx == -Inf] <- 1
   names(w_min_idx) <- species_names
   species_params$w_min <- w[w_min_idx]
-  
+
   # Colour and linetype scales ----
   # for use in plots
   # Colour-blind-friendly palettes
   # From http://dr-k-lo.blogspot.co.uk/2013/07/a-color-blind-friendly-palette-for-r.html
-  # cbbPalette <- c("#000000", "#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", 
+  # cbbPalette <- c("#000000", "#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00",
   #                 "#CC79A7", "#F0E442")
   # From http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
-  # cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", 
+  # cbbPalette <- c("#E69F00", "#56B4E9", "#009E73",
   #                 "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
   # Random palette gemerated pm https://medialab.github.io/iwanthue/
   colour_palette <- c("#815f00",
@@ -626,17 +629,17 @@ new_emptyParams <- function(species_params,
                       "#dc8488",
                       "#005c67",
                       "#5c585a")
-  # type_palette <- c("solid", "dashed", "dotdash", "longdash", 
+  # type_palette <- c("solid", "dashed", "dotdash", "longdash",
   #                   "twodash")
   type_palette <- c("solid")
-  
+
   if ("linecolour" %in% names(species_params)) {
     linecolour <- species_params$linecolour
     # If any NA's first fill them with unused colours
-    linecolour[is.na(linecolour)] <- 
+    linecolour[is.na(linecolour)] <-
       setdiff(colour_palette, linecolour)[1:sum(is.na(linecolour))]
     # if there are still NAs, start from beginning of palette again
-    linecolour[is.na(linecolour)] <- 
+    linecolour[is.na(linecolour)] <-
       colour_palette[1:sum(is.na(linecolour))]
   } else {
     linecolour <- rep(colour_palette, length.out = no_sp)
@@ -644,7 +647,7 @@ new_emptyParams <- function(species_params,
   names(linecolour) <- as.character(species_names)
   linecolour <- c(linecolour, "Total" = "black", "Resource" = "green",
                   "Background" = "grey", "Fishing" = "red")
-  
+
   if ("linetype" %in% names(species_params)) {
     linetype <- species_params$linetype
     linetype[is.na(linetype)] <- "solid"
@@ -654,7 +657,7 @@ new_emptyParams <- function(species_params,
   names(linetype) <- as.character(species_names)
   linetype <- c(linetype, "Total" = "solid", "Resource" = "solid",
                 "Background" = "solid", "Fishing" = "solid")
-  
+
   # Make object ----
   # Should Z0, rrPP and ccPP have names (species names etc)?
   params <- new(
@@ -709,7 +712,7 @@ new_emptyParams <- function(species_params,
     linetype = linetype,
     ft_mask = ft_mask
   )
-  
+
   return(params)
 }
 

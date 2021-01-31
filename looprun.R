@@ -1,5 +1,8 @@
 require(mizer)
+require(assertthat)
+require(tidyverse)
 source("fZooMizer_run.R")
+source("fZooMSS_CalculatePhytoParam.R")
 #source("ZooMizer_setup.R")
 
 environment(new_project_simple) <- asNamespace('mizer')
@@ -9,6 +12,7 @@ assignInNamespace("project_simple", new_project_simple, ns = "mizer")
 Groups <- read.csv("data/TestGroups_mizer.csv")
 
 enviro <- readRDS("data/enviro_test20.RDS")
+enviro <- fZooMSS_CalculatePhytoParam(enviro)
 enviro$dt <- 001
 enviro$tmaxx <- 1000
 
@@ -32,22 +36,26 @@ for (i in 1:nrow(enviro)) {
 }
 
 saveRDS(zoomizergrid, file="test_grid.RDS", version = 2)
+zoomizeroutput <- zoomizergrid[[15]]
+saveRDS(zoomizeroutput,file="zoomizeroutputdt001.rds")
+
+saveRDS(zoomizergrid, file="zoomizergrid_1000dt1.RDS", version = 2)
 
 # #apples to apples comparison:
-# 
+#
 # zoomizeraves <- list()
-
+#
 # for (i in 1:nrow(enviro)) {
 #   zoomizeraves[[i]] <- apply(as.array(zoomizergrid[[i]]@n[501:1001,,]),c(2,3),'mean')
 # }
-# 
+#
 # plotSpectra(hack2, time_range = 1)
-# 
+#
 # zgrid <- list()
 # j <- 0
 # for (i in enviro$cellID) {
 #   j <- j+1
 #   zgrid[[j]] <- zoomssgrid[[i]]
 # }
-# 
+#
 # saveRDS(zgrid, "zoomssgrid.rds")
