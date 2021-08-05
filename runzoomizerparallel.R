@@ -111,7 +111,7 @@ clusterExport(cl, c("ZooMizer_coupled", "PredRate_temp"))
 
 
 
-sims <- foreach(ID = 1:20,
+sims5gamma1280temp <- foreach(ID = 1:20,
                                  .packages = c("mizer", "assertthat", "tidyverse")
                                  #.export = c("ZooMizer_coupled", "PredRate_temp")
 ) %dopar% {
@@ -119,4 +119,8 @@ sims <- foreach(ID = 1:20,
   ZooMizer_coupled(ID, tmax = 100, effort = 0)
 }
 
-saveRDS(sims, "zoomizeroutput.RDS")
+biomasses5gamma1280temp <- foreach(i=1:20) %dopar% sum(colMeans(tail(getBiomass(sims5gamma1280temp[[i]]),25)))
+
+
+# plot(sim)
+# animateSpectra(sim)
