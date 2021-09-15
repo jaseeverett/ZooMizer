@@ -139,7 +139,7 @@ newZooMizerParams <- function(groups, input, fish_params) {
                                          n = 0.7, #The allometric growth exponent used in ZooMSS
                                          z0pre = 1, #external mortality (senescence)
                                          z0exp = 0.3,
-                                         resource_dynamics = "phyto_fixed",
+                                         resource_dynamics = resource,
                                          kappa = kappa,
                                          lambda = lambda,
                                          RDD = constantRDD(species_params = groups), #first go at this

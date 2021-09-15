@@ -1,8 +1,8 @@
-phyto_fixed <- function(params, n, n_pp, n_other, rates, dt, kappa=params@resource_params$kappa, lambda=params@resource_params$lambda, ... ) {
-  npp <- kappa*params@w_full^(1-lambda) / params@dw_full #returns the fixed spectrum at every time step
-  npp[params@w_full > params@resource_params$w_pp_cutoff* (1 - 1e-06)] <- 0
-  return(npp)
-}
+# phyto_fixed <- function(params, n, n_pp, n_other, rates, dt, kappa=params@resource_params$kappa, lambda=params@resource_params$lambda, ... ) {
+#   npp <- kappa*params@w_full^(1-lambda) / params@dw_full #returns the fixed spectrum at every time step
+#   npp[params@w_full > params@resource_params$w_pp_cutoff* (1 - 1e-06)] <- 0
+#   return(npp)
+# }
 
 setZooMizerConstants <- function(params, Groups, sst){
   #### CALCULATES CONSTANT BITS OF THE MODEL FUNCTIONS FOR EACH GROUP
@@ -296,7 +296,7 @@ newFeedingLevel <- function (params, n, n_pp, n_other, t, encounter, ...)
   return(encounter * 0) #zero feeding level corresponds to type 1 feeding
 }
 
-fZooMizer_run <- function(groups, input, no_w = 178){
+fZooMizer_run <- function(groups, input, no_w = 178, resource){
 
   kappa = 10^(input$phyto_int)
   lambda = 1-input$phyto_slope
@@ -329,7 +329,7 @@ fZooMizer_run <- function(groups, input, no_w = 178){
                                          n = 0.7, #The allometric growth exponent used in ZooMSS
                                          z0pre = 1, #external mortality (senescence)
                                          z0exp = 0.3,
-                                         resource_dynamics = "phyto_fixed",
+                                         resource_dynamics = resource,
                                          kappa = kappa,
                                          lambda = lambda,
                                          RDD = constantRDD(species_params = groups), #first go at this
